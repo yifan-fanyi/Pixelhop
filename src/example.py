@@ -1,3 +1,7 @@
+# Alex
+# yifanwang0916@outlook.com
+# 2019.09.25
+
 import numpy as np 
 import cv2
 import time

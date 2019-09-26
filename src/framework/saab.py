@@ -1,7 +1,9 @@
 # Alex
-# 2019.09
+# yifanwang0916@outlook.com
+# 2019.09.25
 
 # Saab transformation for PixelHop unit
+# modeiled from https://github.com/davidsonic/Interpretable_CNN
 
 import numpy as np
 from sklearn.decomposition import PCA
