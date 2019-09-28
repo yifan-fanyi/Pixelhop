@@ -53,7 +53,7 @@ def PixelHop_8_Neighbour(feature, dilate, pad):
     print("------------------- End: PixelHop_8_Neighbour -> using %10f seconds"%(time.time()-t0))
     return res 
 
-def Pixelhop_fit(weight_path, feature):
+def Pixelhop_fit(weight_path, feature, useDC):
     print("------------------- Start: Pixelhop_fit")
     print("       <Info>        Using weight: %s"%str(weight_path))
     t0 = time.time()
@@ -62,13 +62,14 @@ def Pixelhop_fit(weight_path, feature):
     fr.close()
     weight = pca_params['Layer_0/kernel'].astype(np.float32)
     bias = pca_params['Layer_%d/bias' % 0]
-    # Add bias
-    feature_w_bias = feature + 1 / np.sqrt(feature.shape[3]) * bias
-    # Transform to get data for the next stage
-    transformed_feature = np.matmul(feature_w_bias, np.transpose(weight))
-    e = np.zeros((1, weight.shape[0]))
-    e[0, 0] = 1
-    transformed_feature -= bias * e
+    if useDC == True:
+        # Add bias
+        feature_w_bias = feature + 1 / np.sqrt(feature.shape[3]) * bias
+        # Transform to get data for the next stage
+        transformed_feature = np.matmul(feature_w_bias, np.transpose(weight))
+        e = np.zeros((1, weight.shape[0]))
+        e[0, 0] = 1
+        transformed_feature -= bias * e
     print("       <Info>        Transformed feature shape: %s"%str(transformed_feature.shape))
     print("------------------- End: Pixelhop_fit -> using %10f seconds"%(time.time()-t0))
     return transformed_feature
@@ -80,7 +81,7 @@ def PixelHop_Unit(feature, dilate=1, num_AC_kernels=6, pad='reflect', weight_nam
     if getK == True:
         saab = Saab('../weight/'+weight_name, kernel_sizes=np.array([3]), num_kernels=np.array([num_AC_kernels]), useDC=useDC)
         saab.fit(feature)
-    transformed_feature = Pixelhop_fit('../weight/'+weight_name, feature) 
+    transformed_feature = Pixelhop_fit('../weight/'+weight_name, feature, useDC) 
     print("       <Info>        Output feature shape: %s"%str(transformed_feature.shape))
     print("=========== End: PixelHop_Unit -> using %10f seconds"%(time.time()-t0))
     return transformed_feature
