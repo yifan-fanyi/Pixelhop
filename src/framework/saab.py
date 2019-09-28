@@ -41,7 +41,7 @@ class Saab():
         print("       <Info>        Energy percent: %f" % np.cumsum(pca.explained_variance_ratio_)[num_components - 1])
         return kernels, mean
 
-    def multi_Saab_transform(self, pixelhop_feature, kernel_sizes, num_kernels, energy_percent, useDC): 
+    def Saab_transform(self, pixelhop_feature, kernel_sizes, num_kernels, energy_percent, useDC): 
         S = pixelhop_feature.shape
         print("       <Info>        pixelhop_feature.shape: %s"%str(pixelhop_feature.shape))
 
@@ -53,7 +53,11 @@ class Saab():
         sample_patches_centered, feature_expectation = self.remove_mean(sample_patches, axis=0)
         training_data, dc = self.remove_mean(sample_patches_centered, axis=1)
         print('       <Info>        training_data.shape: {}'.format(training_data.shape))
-        # Compute PCA kernel
+
+        bias = LA.norm(sample_patches, axis=1)
+        bias = np.max(bias)
+        pca_params['Layer_%d/bias' % 0] = bias
+        
         if not num_kernels is None:
             num_kernel = num_kernels[0]
         kernels, mean = self.find_kernels_pca(training_data, num_kernel, energy_percent)
@@ -75,7 +79,7 @@ class Saab():
     def fit(self, pixelhop_feature):
         print("------------------- Start: Saab transformation")
         t0 = time.time()
-        pca_params = self.multi_Saab_transform(pixelhop_feature=pixelhop_feature,
+        pca_params = self.Saab_transform(pixelhop_feature=pixelhop_feature,
                                                 kernel_sizes=self.kernel_sizes,
                                                 num_kernels=self.num_kernels,
                                                 energy_percent=self.energy_percent, 

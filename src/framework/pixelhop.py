@@ -61,12 +61,19 @@ def Pixelhop_fit(weight_path, feature):
     pca_params = pickle.load(fr)
     fr.close()
     weight = pca_params['Layer_0/kernel'].astype(np.float32)
-    transformed_feature = np.dot(feature, np.transpose(weight))
+    bias = pca_params['Layer_%d/bias' % 0]
+    # Add bias
+    feature_w_bias = feature + 1 / np.sqrt(feature.shape[3]) * bias
+    # Transform to get data for the next stage
+    transformed_feature = np.matmul(feature_w_bias, np.transpose(weight))
+    e = np.zeros((1, weight.shape[0]))
+    e[0, 0] = 1
+    transformed_feature -= bias * e
     print("       <Info>        Transformed feature shape: %s"%str(transformed_feature.shape))
     print("------------------- End: Pixelhop_fit -> using %10f seconds"%(time.time()-t0))
     return transformed_feature
 
-def PixelHop(feature, dilate=1, num_AC_kernels=6, pad='reflect', weight_name='tmp.pkl', getK=False, useDC=False):
+def PixelHop_Unit(feature, dilate=1, num_AC_kernels=6, pad='reflect', weight_name='tmp.pkl', getK=False, useDC=False):
     print("=========== Start: PixelHop_Unit")
     t0 = time.time()
     feature = PixelHop_8_Neighbour(feature, dilate, pad)
