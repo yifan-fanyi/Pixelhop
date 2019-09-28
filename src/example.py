@@ -31,4 +31,4 @@ def myModel(x, getK=1):
 
 x = cv2.imread('../data/test.jpg')
 x = x.reshape(1, x.shape[0], x.shape[1], -1)
-feature = myModel(x, getK=0)
+feature = myModel(x, getK=1)

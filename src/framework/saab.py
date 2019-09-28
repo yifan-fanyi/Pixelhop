@@ -53,10 +53,6 @@ class Saab():
         sample_patches_centered, feature_expectation = self.remove_mean(sample_patches, axis=0)
         training_data, dc = self.remove_mean(sample_patches_centered, axis=1)
         print('       <Info>        training_data.shape: {}'.format(training_data.shape))
-
-        bias = LA.norm(sample_patches, axis=1)
-        bias = np.max(bias)
-        pca_params['Layer_%d/bias' % 0] = bias
         
         if not num_kernels is None:
             num_kernel = num_kernels[0]
@@ -67,7 +63,10 @@ class Saab():
             kernels = np.concatenate((dc_kernel, kernels), axis=0)
 
         transformed = np.matmul(sample_patches_centered, np.transpose(kernels))
-            
+        bias = LA.norm(transformed, axis=1)
+        bias = np.max(bias)
+        pca_params['Layer_%d/bias' % 0] = bias
+
         print("       <Info>        Sample patches shape after flatten: %s"%str(sample_patches.shape))
         print("       <Info>        Kernel shape: %s"%str(kernels.shape))
         print("       <Info>        Transformed shape: %s"%str(transformed.shape))
