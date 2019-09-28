@@ -62,11 +62,11 @@ def Pixelhop_fit(weight_path, feature, useDC):
     fr.close()
     weight = pca_params['Layer_0/kernel'].astype(np.float32)
     bias = pca_params['Layer_%d/bias' % 0]
+    # Add bias
+    feature_w_bias = feature + 1 / np.sqrt(feature.shape[3]) * bias
+    # Transform to get data for the next stage
+    transformed_feature = np.matmul(feature_w_bias, np.transpose(weight))
     if useDC == True:
-        # Add bias
-        feature_w_bias = feature + 1 / np.sqrt(feature.shape[3]) * bias
-        # Transform to get data for the next stage
-        transformed_feature = np.matmul(feature_w_bias, np.transpose(weight))
         e = np.zeros((1, weight.shape[0]))
         e[0, 0] = 1
         transformed_feature -= bias * e
