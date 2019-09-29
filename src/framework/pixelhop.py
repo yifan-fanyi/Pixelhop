@@ -37,8 +37,8 @@ def PixelHop_8_Neighbour(feature, dilate, pad):
         res = np.zeros((S[1], S[2], S[0], 9*S[3]))
     idx = np.array([-1, 0, 1])
     feature = np.moveaxis(feature, 0, 2)
-    for i in range(dilate, S[1]):
-        for j in range(dilate, S[2]):
+    for i in range(dilate, feature.shape[0]-dilate):
+        for j in range(dilate, feature.shape[1]-dilate):
             tmp = []
             for ii in idx:
                 for jj in idx:
