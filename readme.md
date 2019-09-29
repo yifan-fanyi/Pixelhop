@@ -43,8 +43,7 @@ LAG Unit:
 *`Train`* -> True: training stage; False: testing stage (default: `True`)  
 
 ```
-x1=LAG_Unit(x,train_labels=train_labels, class_list=class_list,
-                             SAVE=SAVE,num_clusters=50,alpha=5,Train=True)
+x1=LAG_Unit(x,train_labels=train_labels, class_list=class_list,SAVE=SAVE,num_clusters=50,alpha=5,Train=True)
 ```
 
 ## Example
