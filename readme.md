@@ -3,7 +3,7 @@ yifanwang0916@outlook.com, yueruche@outlook.com
 last update 2019.09.25
 
 # Pixelhop
-From [arXiv:1909.08190](https://arxiv.org/abs/1909.08190). This is a well packed Pixelhop Layer with simple usage. It uses Saab ([arXiv:1810.02786](https://arxiv.org/abs/1810.02786)) inside it, part of the Saab code is modified from https://github.com/davidsonic/Interpretable_CNN. 
+From [arXiv:1909.08190](https://arxiv.org/abs/1909.08190). There are well packed Pixelhop unit and LAG unit with simple usage. It uses Saab ([arXiv:1810.02786](https://arxiv.org/abs/1810.02786)) inside it, part of the Saab code is modified from https://github.com/davidsonic/Interpretable_CNN. 
 
 ## Usage
 Run the code in `Python3` in `./src` folder.
