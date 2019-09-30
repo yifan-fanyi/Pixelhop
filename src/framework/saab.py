@@ -24,8 +24,13 @@ class Saab():
         feature_mean = np.mean(features, axis=axis, keepdims=True)
         feature_remove_mean = features - feature_mean
         return feature_remove_mean, feature_mean
-
-    def find_kernels_pca(self, samples, num_kernels, energy_percent):
+    
+    def find_kernels_pca(self, samples, num_kernels, energy_percent, N=10000000):
+        # control the number of patches, eliminate low variance patches
+        N=min(N,samples.shape[0])
+        samples=samples[np.random.choice(samples.shape[0],N,replace=False)]
+        var_samples=np.var(samples,1)
+        samples=samples[var_samples>1e-4]
         if num_kernels:
             num_components = num_kernels
             pca = PCA(n_components=num_components, svd_solver='full')
