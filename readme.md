@@ -1,6 +1,6 @@
 Yifan Wang, Yueru Chen  
 yifanwang0916@outlook.com, yueruche@outlook.com
-last update 2019.09.25
+last update 2019.10.11
 
 # Pixelhop
 From [arXiv:1909.08190](https://arxiv.org/abs/1909.08190). There are well packed Pixelhop unit and LAG unit with simple usage. It uses Saab ([arXiv:1810.02786](https://arxiv.org/abs/1810.02786)) inside it, part of the Saab code is modified from https://github.com/davidsonic/Interpretable_CNN. 
@@ -28,19 +28,19 @@ x1 = PixelHop_Unit(x, dilate=1, pad='reflect', num_AC_kernels=9, weight_name='pi
 ```
 LAG Unit:
 
-*`x`* -> Input data matrix, 2-D tensor `(N,D)`
+*`X`* -> Input data matrix, 2-D tensor `(N,D)`
 
-*`train_labels`* -> class labels of each training sample  
+*`Y`* -> class labels of each training sample  
 
 *`class_list`* -> list of object classes
 
-*`SAVE`* -> store parameters 
+*`weight_path`* -> path to weight file to loaded or saved
 
 *`num_clusters`* -> output feature dimension (default: 50)  
 
 *`alpha`* -> A parameter to determine the relationship between the Euclidean distance and the likelihood for a sample belonging to a cluste  (default: 5) 
 
-*`Train`* -> True: training stage; False: testing stage (default: `True`)  
+*`train`* -> True: training stage; False: testing stage (default: `True`)  
 
 ```
 x1=LAG_Unit(x,train_labels=train_labels, class_list=class_list,SAVE=SAVE,num_clusters=50,alpha=5,Train=True)

@@ -4,7 +4,6 @@
 
 import numpy as np 
 import cv2
-import time
 
 from framework.layer import *
 from framework.utli import *
@@ -12,8 +11,6 @@ from framework.pixelhop import *
 from framework.data import *
 from framework.LAG import LAG_Unit
 
-from sklearn.model_selection import train_test_split
-from sklearn.metrics.pairwise import euclidean_distances
 from skimage.measure import block_reduce
 
 def myModel(x, getK=1):
@@ -28,11 +25,12 @@ def myModel(x, getK=1):
     x4 = myResize(x4, x.shape[1], x.shape[2])
     return np.concatenate((x1,x2,x3,x4), axis=3)
 
-if False:
+def PixelHop_example():
     x = cv2.imread('../data/test.jpg')
     x = x.reshape(1, x.shape[0], x.shape[1], -1)
     feature = myModel(x, getK=1)
-if True:
+
+def LAG_example():
     train_images, train_labels, test_images, test_labels, class_list = import_data_mnist("0-9")  
     N_train=1000
     N_test=500
@@ -62,3 +60,6 @@ if True:
     clf=SVC().fit(feature, train_labels) 
     print('***** Train ACC:', accuracy_score(train_labels,clf.predict(feature)))
     print('***** Test ACC:', accuracy_score(test_labels,clf.predict(feature_test)))
+
+PixelHop_example()
+LAG_example()
