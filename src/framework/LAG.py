@@ -5,131 +5,108 @@ Created on Sat Sep 28 17:49:47 2019
 
 @author: yueru
 """
+# modified by Alex 2019.10.11
 
+import os
+import numpy as np
+import time
+import pickle
 import scipy
 from sklearn import preprocessing 
-import numpy as np
 from sklearn.metrics.pairwise import euclidean_distances
-from keras import backend as K
 from sklearn.cluster import MiniBatchKMeans
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
-K.tensorflow_backend._get_available_gpus()
-
-def Norm(feature): 
-    #   shape:(# sample, # feature)
-    feature = feature - np.min(feature,1).reshape(-1,1)
-    feature = feature/np.sum(feature,1).reshape(-1,1)
-    return feature
-def Relu(centroid_old): 
-    #   shape:(# sample, # feature)
-    centroid_old[centroid_old<0]=0
-    return centroid_old
-def llsr_train(feature_train,labels_train,encode=True,centroid=None,clus_labels=None,train_labels=None,scaler=None, alpha=10):
-    if encode:
-        alpha=alpha
-        print('Alpha:',alpha)
-#        labels_train_onehot = encode_onehot(labels_train) 
-        n_sample=labels_train.shape[0]
-        labels_train_onehot=np.zeros((n_sample,clus_labels.shape[0]))
-        for i in range(n_sample):
-            gt=train_labels[i]
-            idx=clus_labels==gt
-            dis=euclidean_distances(feature_train[i].reshape(1,-1),centroid[idx]).reshape(-1)
-            dis=dis/(dis.min()+1e-5)
-            p_dis=np.exp(-dis*alpha)
-            p_dis=p_dis/p_dis.sum()
-            labels_train_onehot[i,idx]=p_dis            
-    else:     
-        labels_train_onehot = labels_train 
-    feature_train = scaler.transform(feature_train)
-    A = np.ones((feature_train.shape[0], 1))
-    feature_train = np.concatenate((A, feature_train), axis=1)
-    #    print(np.sort(labels_train_onehot[:10],1)[:,::-1])
-    weight=scipy.linalg.lstsq(feature_train,labels_train_onehot)[0]       
-    weight_save = weight[1:weight.shape[0]]
-    bias_save = weight[0].reshape(1, -1)
-    return weight_save, bias_save
-def llsr_test(feature_test,weight_save,bias_save):
-    
-    feature_test=np.matmul(feature_test,weight_save)
-    feature_test=feature_test+bias_save
-    return feature_test
-
-def compute_target_(feature,train_labels,num_clusters,class_list): 
-    use_classes=len(class_list) 
-
-    train_labels = train_labels.reshape(-1)
-    num_clusters_sub = int(num_clusters/use_classes)
-    batch_size= 1000 
-    labels = np.zeros((feature.shape[0]))
+def compute_target_(X, Y, num_clusters, class_list, batch_size= 1000): 
+    Y = Y.reshape(-1)
+    num_clusters_sub = int(num_clusters/len(class_list))
+    labels = np.zeros((X.shape[0]))
     clus_labels = np.zeros((num_clusters,))
-    centroid = np.zeros((num_clusters, feature.shape[1]))
-    for i in range(use_classes):
-        ID=class_list[i]
-        feature_train = feature[train_labels==ID]
-        kmeans = MiniBatchKMeans(n_clusters=num_clusters_sub,batch_size=batch_size).fit(feature_train)
-#            kmeans = KMeans(n_clusters=num_clusters_sub).fit(feature_train)
-        labels[train_labels==ID] = kmeans.labels_ + i*num_clusters_sub
+    centroid = np.zeros((num_clusters, X.shape[1]))
+    for i in range(len(class_list)):
+        ID = class_list[i]
+        feature_train = X[Y==ID]
+        kmeans = MiniBatchKMeans(n_clusters=num_clusters_sub, batch_size=batch_size).fit(feature_train)
+        labels[Y==ID] = kmeans.labels_ + i*num_clusters_sub
         clus_labels[i*num_clusters_sub:(i+1)*num_clusters_sub] = ID
         centroid[i*num_clusters_sub:(i+1)*num_clusters_sub] = kmeans.cluster_centers_
-        print ('FINISH KMEANS', i)
-        
-    return labels, clus_labels.astype(int),centroid
+        print ("       <Info>        FINISH KMEANS: %s"%str(i))
+    return labels, clus_labels.astype(int), centroid
 
-def encode_onehot(a):
-    a = a.reshape(-1)
-    print ('before encode shape:', a.shape)
-    b = np.zeros((a.shape[0],1+ int(a.max())))# - 1./a.max()
-    b[np.arange(a.shape[0]), a] = 1
-    print ('after encode shape:', b.shape)
-    return b.astype(float)
+def llsr_train(X, Y, encode=True, num_clusters=10, class_list=None, alpha=10):
+    SAVE = {} 
+    labels_train, clus_labels, centroid = compute_target_(X, Y, num_clusters, class_list)    
+    scaler = preprocessing.StandardScaler().fit(X)  
 
+    if encode:
+        labels_train_onehot = np.zeros((labels_train.shape[0], clus_labels.shape[0]))
+        for i in range(labels_train.shape[0]):
+            gt = Y[i]
+            idx = clus_labels == gt
+            dis = euclidean_distances(X[i].reshape(1,-1), centroid[idx]).reshape(-1)
+            dis = dis/(dis.min()+1e-5)
+            p_dis = np.exp(-dis*alpha)
+            p_dis = p_dis/p_dis.sum()
+            labels_train_onehot[i,idx] = p_dis            
+    else:     
+        labels_train_onehot = labels_train 
+    feature = scaler.transform(X)
+    A = np.ones((feature.shape[0], 1))
+    feature = np.concatenate((A, feature), axis=1)
+    weight = scipy.linalg.lstsq(feature, labels_train_onehot)[0]       
+    weight_save = weight[1:weight.shape[0]]
+    bias_save = weight[0].reshape(1, -1)
 
-        
-def LAG_Unit(feature,train_labels=None, class_list=None, SAVE=None,num_clusters=50,alpha=5,Train=True):
+    SAVE['clus_labels'] = clus_labels
+    SAVE['LLSR weight'] = weight_save
+    SAVE['LLSR bias'] = bias_save
+    SAVE['scaler'] = scaler
+    return SAVE
+
+def llsr_acc(feature, Y, SAVE):
+    pred_labels = np.zeros((feature.shape[0], len(np.unique(Y))))
+    for km_i in range(len(np.unique(Y))):
+        pred_labels[:,km_i] = feature[:, SAVE['clus_labels']==km_i].sum(1)
+    pred_labels = np.argmax(pred_labels, axis=1)
+    idx = pred_labels == Y.reshape(-1)
+    print("       <Info>        KMeans train accuracy: %s"%str(1.*np.count_nonzero(idx)/Y.shape[0]))
+
+def llsr_test(X, SAVE=None, weight_path=None):
+    if SAVE == None:
+        print("       <Info>        load weight: %s"%('../weight/'+weight_path))
+        fr = open('../weight/'+weight_path, 'rb')
+        SAVE = pickle.load(fr)
+        fr.close()
+    X = SAVE['scaler'].transform(X)
+    X = np.matmul(X, SAVE['LLSR weight'])
+    X = X + SAVE['LLSR bias']
+    return X
+
+def LAG_Unit(X, Y=None, class_list=None, weight_path="LAG_weight.pkl", num_clusters=50, alpha=5, train=True):
 #                  feature: training features or testing features
 #                  class_list: list of class labels
 #                  SAVE: store parameters
 #                  num_clusters: output feature dimension
 #                  alpha: a parameter when computing probability vector
 #                  Train: True: training stage; False: testing stage
-                  
-    if Train:
-            
-        print('--------Train LAG Unit--------')    
-        print ('feature_train shape:', feature.shape)
-        use_classes=len(np.unique(train_labels)) 
-        k=0                        
-        # Compute output features       
-        labels_train,clus_labels,centroid = compute_target_(feature,train_labels,num_clusters,
-          class_list)    
-#                SAVE['train_dis']=cosine_similarity(feature_train,centroid)
-#                SAVE['test_dis']=cosine_similarity(feature_test,centroid)
-        # Solve LSR
-        scaler=preprocessing.StandardScaler().fit(feature)  
-        weight_save,bias_save=llsr_train(feature,labels_train.astype(int),encode=True,centroid=centroid,
-                                         clus_labels=clus_labels,train_labels=train_labels,
-                                         scaler=scaler,alpha=alpha)
-        
-        SAVE[str(k)+' clus_labels'] = clus_labels
-        SAVE[str(k)+' LLSR weight'] = weight_save
-        SAVE[str(k)+' LLSR bias'] = bias_save
-        SAVE[str(k)+' scaler'] = scaler
-        
-        feature = llsr_test(scaler.transform(feature),weight_save,bias_save)
-        pred_labels = np.zeros((feature.shape[0],use_classes))
-        for km_i in range(use_classes):
-            pred_labels[:,km_i]=feature[:,clus_labels==km_i].sum(1)
-        pred_labels = np.argmax(pred_labels, axis=1)
-        idx = pred_labels == train_labels.reshape(-1)
-        print(k, ' Kmean training acc is: {}'.format(1.*np.count_nonzero(idx)/train_labels.shape[0]))
-        return feature
-        
+    print("=========== Start: LAG_Unit")
+    print("       <Info>        Input feature shape: %s"%str(X.shape))
+    print("       <Info>        Class list: %s"%str(class_list))
+    print("       <Info>        number of cluster: %s"%str(num_clusters))
+    print("       <Info>        alpha: %s"%str(alpha))
+    t0 = time.time()
+    if train:
+        print("------------------- Start: LAG Train")
+        t1 = time.time()
+        SAVE = llsr_train(X, Y, encode=True, num_clusters=num_clusters, class_list=class_list, alpha=alpha)  
+        feature = llsr_test(X, SAVE=SAVE)
+        llsr_acc(feature, Y, SAVE)
+        fr = open('../weight/'+weight_path, 'wb')
+        pickle.dump(SAVE, fr)
+        fr.close()
+        print("       <Info>        save weight: %s"%('../weight/'+weight_path))
+        print("------------------- End: LAG Train -> using %10f seconds"%(time.time()-t1))  
     else:
-        print('--------Testing--------')
-        k=0
-        scaler=SAVE[str(k)+' scaler']
-        feature_reduced =llsr_test(scaler.transform(feature),SAVE[str(k)+' LLSR weight'],SAVE[str(k)+' LLSR bias'])
-        return feature_reduced      
-    
-
+        feature =llsr_test(X, weight_path=weight_path)
+    print("=========== End: LAG_Unit -> using %10f seconds"%(time.time()-t0))
+    return feature     
