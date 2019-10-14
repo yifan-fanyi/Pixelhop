@@ -17,7 +17,7 @@ from sklearn.metrics.pairwise import euclidean_distances
 from sklearn.cluster import MiniBatchKMeans
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
-def compute_target_(X, Y, num_clusters, class_list, batch_size= 1000): 
+def compute_target_(X, Y, num_clusters, class_list, batch_size=1000): 
     Y = Y.reshape(-1)
     num_clusters_sub = int(num_clusters/len(class_list))
     labels = np.zeros((X.shape[0]))
@@ -26,7 +26,7 @@ def compute_target_(X, Y, num_clusters, class_list, batch_size= 1000):
     for i in range(len(class_list)):
         ID = class_list[i]
         feature_train = X[Y==ID]
-        kmeans = MiniBatchKMeans(n_clusters=num_clusters_sub, batch_size=batch_size).fit(feature_train)
+        kmeans = MiniBatchKMeans(n_clusters=num_clusters_sub, batch_size=batch_size, verbose=1).fit(feature_train)
         labels[Y==ID] = kmeans.labels_ + i*num_clusters_sub
         clus_labels[i*num_clusters_sub:(i+1)*num_clusters_sub] = ID
         centroid[i*num_clusters_sub:(i+1)*num_clusters_sub] = kmeans.cluster_centers_
