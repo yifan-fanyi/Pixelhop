@@ -12,7 +12,7 @@ Pixelhop Unit:
 
 *`x`* -> Input, 4-D tensor `(N,H,W,D)`, the same as `channel_last` mode in Keras. 
 
-*`dilate`* -> (numpy array) Controls location of chooesn neghbour pixels. Support any window size. 
+*`dilate`* -> (numpy array or list) Controls location of chooesn neghbour pixels. Support any window size. 
 
 *`pad`* -> Padding, support `none`, `reflect`, `zeros` (default: `reflect`)  
 
@@ -24,7 +24,7 @@ Pixelhop Unit:
 
 *`useDC`* -> If add DC component. (default: `False`)  
 ```
-x1 = PixelHop_Unit(x, dilate=1, pad='reflect', num_AC_kernels=9, weight_name='pixelhop1.pkl', getK=True, useDC=False)
+x1 = PixelHop_Unit(x, dilate=[1], pad='reflect', num_AC_kernels=9, weight_name='pixelhop1.pkl', getK=True, useDC=False)
 ```
 LAG Unit:
 

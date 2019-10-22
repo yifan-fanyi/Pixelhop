@@ -20,11 +20,6 @@ import time
 
 from framework.saab import Saab
 
-def generate_idx(idx):
-    nidx = -1*idx[::-1]
-    idx = np.concatenate((nidx, np.zeros((1)), idx), axis=0)
-    return idx.astype('int64')
-
 def PixelHop_Neighbour(feature, dilate, pad):
     print("------------------- Start: PixelHop_Neighbour")
     print("       <Info>        Input feature shape: %s"%str(feature.shape))
@@ -32,7 +27,7 @@ def PixelHop_Neighbour(feature, dilate, pad):
     print("       <Info>        padding: %s"%str(pad))
     t0 = time.time()
     S = feature.shape
-    idx = generate_idx(dilate)
+    idx = [-1, 0, 1]
     if pad == 'reflect':
         feature = np.pad(feature, ((0,0),(dilate[-1], dilate[-1]),(dilate[-1], dilate[-1]),(0,0)), 'reflect')
     elif pad == 'zeros':
@@ -40,16 +35,17 @@ def PixelHop_Neighbour(feature, dilate, pad):
     if pad == "none":
         res = np.zeros((S[1]-2*dilate[-1], S[2]-2*dilate[-1], S[0], 9*S[3]))
     else:
-        res = np.zeros((S[1], S[2], S[0], idx.shape[0]*idx.shape[0]*S[3]))
+        res = np.zeros((S[1], S[2], S[0], (8*dilate.shape[0]+1)*S[3]))
     feature = np.moveaxis(feature, 0, 2)
     for i in range(dilate[-1], feature.shape[0]-dilate[-1]):
         for j in range(dilate[-1], feature.shape[1]-dilate[-1]):
             tmp = []
-            for ii in idx:
-                for jj in idx:
-                    iii = i+ii
-                    jjj = j+jj
-                    tmp.append(feature[iii, jjj])
+            for d in dilate:
+                for ii in idx:
+                    for jj in idx:
+                        iii = i+ii*d
+                        jjj = j+jj*d
+                        tmp.append(feature[iii, jjj])
             tmp = np.array(tmp)
             tmp = np.moveaxis(tmp,0,1)
             res[i-dilate[-1], j-dilate[-1]] = tmp.reshape(S[0],-1)
