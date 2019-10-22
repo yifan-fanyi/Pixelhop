@@ -40,12 +40,12 @@ def LAG_example():
     test_images=train_images[:N_test]
     test_labels=train_labels[:N_test]
     
-    train_feature=PixelHop_Unit(train_images, dilate=1, pad='reflect', num_AC_kernels=5, weight_name='pixelhop1_mnist.pkl', getK=1)
+    train_feature=PixelHop_Unit(train_images, dilate=np.array([1]), pad='reflect', num_AC_kernels=5, weight_name='pixelhop1_mnist.pkl', getK=1)
     train_feature = block_reduce(train_feature, (1, 4, 4, 1), np.mean).reshape(N_train,-1)
     train_feature_reduce=LAG_Unit(train_feature, train_labels, class_list=class_list,
                              num_clusters=50,alpha=5,train=True)
     
-    test_feature=PixelHop_Unit(test_images, dilate=1, pad='reflect', num_AC_kernels=5, weight_name='pixelhop1_mnist.pkl', getK=0)
+    test_feature=PixelHop_Unit(test_images, dilate=np.array([1]), pad='reflect', num_AC_kernels=5, weight_name='pixelhop1_mnist.pkl', getK=0)
     test_feature=block_reduce(test_feature, (1, 4, 4, 1), np.mean).reshape(N_test,-1)
     test_feature_reduce=LAG_Unit(test_feature, class_list=class_list,
                     num_clusters=50,alpha=5,train=False)
