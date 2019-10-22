@@ -20,37 +20,42 @@ import time
 
 from framework.saab import Saab
 
-def PixelHop_8_Neighbour(feature, dilate, pad):
-    print("------------------- Start: PixelHop_8_Neighbour")
+def generate_idx(idx):
+    nidx = -1*idx[::-1]
+    idx = np.concatenate((nidx, np.zeros((1)), idx), axis=0)
+    return idx.astype('int64')
+
+def PixelHop_Neighbour(feature, dilate, pad):
+    print("------------------- Start: PixelHop_Neighbour")
     print("       <Info>        Input feature shape: %s"%str(feature.shape))
     print("       <Info>        dilate: %s"%str(dilate))
     print("       <Info>        padding: %s"%str(pad))
     t0 = time.time()
     S = feature.shape
+    idx = generate_idx(dilate)
     if pad == 'reflect':
-        feature = np.pad(feature, ((0,0),(dilate, dilate),(dilate, dilate),(0,0)), 'reflect')
+        feature = np.pad(feature, ((0,0),(dilate[-1], dilate[-1]),(dilate[-1], dilate[-1]),(0,0)), 'reflect')
     elif pad == 'zeros':
-        feature = np.pad(feature, ((0,0),(dilate, dilate),(dilate, dilate),(0,0)), 'constant', constant_values=0)
+        feature = np.pad(feature, ((0,0),(dilate[-1], dilate[-1]),(dilate[-1], dilate[-1]),(0,0)), 'constant', constant_values=0)
     if pad == "none":
-        res = np.zeros((S[1]-2*dilate, S[2]-2*dilate, S[0], 9*S[3]))
+        res = np.zeros((S[1]-2*dilate[-1], S[2]-2*dilate[-1], S[0], 9*S[3]))
     else:
-        res = np.zeros((S[1], S[2], S[0], 9*S[3]))
-    idx = np.array([-1, 0, 1])
+        res = np.zeros((S[1], S[2], S[0], idx.shape[0]*idx.shape[0]*S[3]))
     feature = np.moveaxis(feature, 0, 2)
-    for i in range(dilate, feature.shape[0]-dilate):
-        for j in range(dilate, feature.shape[1]-dilate):
+    for i in range(dilate[-1], feature.shape[0]-dilate[-1]):
+        for j in range(dilate[-1], feature.shape[1]-dilate[-1]):
             tmp = []
             for ii in idx:
                 for jj in idx:
-                    iii = i+ii*dilate
-                    jjj = j+jj*dilate
+                    iii = i+ii
+                    jjj = j+jj
                     tmp.append(feature[iii, jjj])
             tmp = np.array(tmp)
             tmp = np.moveaxis(tmp,0,1)
-            res[i-dilate, j-dilate] = tmp.reshape(S[0],-1)
+            res[i-dilate[-1], j-dilate[-1]] = tmp.reshape(S[0],-1)
     res = np.moveaxis(res, 2, 0)
     print("       <Info>        Output feature shape: %s"%str(res.shape))
-    print("------------------- End: PixelHop_8_Neighbour -> using %10f seconds"%(time.time()-t0))
+    print("------------------- End: PixelHop_Neighbour -> using %10f seconds"%(time.time()-t0))
     return res 
 
 def Pixelhop_fit(weight_path, feature, useDC):
@@ -74,17 +79,15 @@ def Pixelhop_fit(weight_path, feature, useDC):
     print("------------------- End: Pixelhop_fit -> using %10f seconds"%(time.time()-t0))
     return transformed_feature
 
-def PixelHop_Unit(feature, dilate=1, num_AC_kernels=6, pad='reflect', weight_name='tmp.pkl', getK=False, useDC=False):
+def PixelHop_Unit(feature, dilate=np.array([1]), num_AC_kernels=6, pad='reflect', weight_name='tmp.pkl', getK=False, useDC=False):
     print("=========== Start: PixelHop_Unit")
     t0 = time.time()
-    feature = PixelHop_8_Neighbour(feature, dilate, pad)
+    feature = PixelHop_Neighbour(feature, dilate, pad)
     if getK == True:
-        saab = Saab('../weight/'+weight_name, kernel_sizes=np.array([3]), num_kernels=np.array([num_AC_kernels]), useDC=useDC)
+        saab = Saab('../weight/'+weight_name, kernel_sizes=np.array([2*dilate.shape[0]+1]), num_kernels=np.array([num_AC_kernels]), useDC=useDC)
         saab.fit(feature)
     transformed_feature = Pixelhop_fit('../weight/'+weight_name, feature, useDC) 
     print("       <Info>        Output feature shape: %s"%str(transformed_feature.shape))
     print("=========== End: PixelHop_Unit -> using %10f seconds"%(time.time()-t0))
     return transformed_feature
-
-
 

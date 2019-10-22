@@ -14,10 +14,11 @@ import pickle
 import scipy
 from sklearn import preprocessing 
 from sklearn.metrics.pairwise import euclidean_distances
-from sklearn.cluster import MiniBatchKMeans
+from sklearn.cluster import MiniBatchKMeans,KMeans
+from sklearn.metrics import silhouette_score
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
-def compute_target_(X, Y, num_clusters, class_list, batch_size=1000): 
+def compute_target_(X, Y, num_clusters, class_list, batch_size=None): 
     Y = Y.reshape(-1)
     num_clusters_sub = int(num_clusters/len(class_list))
     labels = np.zeros((X.shape[0]))
@@ -26,16 +27,21 @@ def compute_target_(X, Y, num_clusters, class_list, batch_size=1000):
     for i in range(len(class_list)):
         ID = class_list[i]
         feature_train = X[Y==ID]
-        kmeans = MiniBatchKMeans(n_clusters=num_clusters_sub, batch_size=batch_size, verbose=1).fit(feature_train)
+        if batch_size == None:
+            kmeans = KMeans(n_clusters=num_clusters_sub, verbose=0, random_state=9).fit(feature_train)
+        else:
+            kmeans = MiniBatchKMeans(n_clusters=num_clusters_sub, verbose=1, batch_size=batch_size).fit(feature_train)
         labels[Y==ID] = kmeans.labels_ + i*num_clusters_sub
         clus_labels[i*num_clusters_sub:(i+1)*num_clusters_sub] = ID
         centroid[i*num_clusters_sub:(i+1)*num_clusters_sub] = kmeans.cluster_centers_
+        s = silhouette_score(feature_train, kmeans.labels_)
+        print ("       <Info>        silhouette_score: %s"%str(s))
         print ("       <Info>        FINISH KMEANS: %s"%str(i))
     return labels, clus_labels.astype(int), centroid
 
-def llsr_train(X, Y, encode=True, num_clusters=10, class_list=None, alpha=10):
+def llsr_train(X, Y, encode=True, num_clusters=10, class_list=None, alpha=10, batch_size=None):
     SAVE = {} 
-    labels_train, clus_labels, centroid = compute_target_(X, Y, num_clusters, class_list)    
+    labels_train, clus_labels, centroid = compute_target_(X, Y, num_clusters, class_list, batch_size=batch_size)    
     scaler = preprocessing.StandardScaler().fit(X)  
 
     if encode:
@@ -82,7 +88,7 @@ def llsr_test(X, SAVE=None, weight_path=None):
     X = X + SAVE['LLSR bias']
     return X
 
-def LAG_Unit(X, Y=None, class_list=None, weight_path="LAG_weight.pkl", num_clusters=50, alpha=5, train=True):
+def LAG_Unit(X, Y=None, class_list=None, weight_path="LAG_weight.pkl", num_clusters=50, alpha=5, batch_size=None, train=True):
 #                  feature: training features or testing features
 #                  class_list: list of class labels
 #                  SAVE: store parameters
@@ -94,11 +100,12 @@ def LAG_Unit(X, Y=None, class_list=None, weight_path="LAG_weight.pkl", num_clust
     print("       <Info>        Class list: %s"%str(class_list))
     print("       <Info>        number of cluster: %s"%str(num_clusters))
     print("       <Info>        alpha: %s"%str(alpha))
+    print("       <Info>        batch size: %s"%str(batch_size))
     t0 = time.time()
     if train:
         print("------------------- Start: LAG Train")
         t1 = time.time()
-        SAVE = llsr_train(X, Y, encode=True, num_clusters=num_clusters, class_list=class_list, alpha=alpha)  
+        SAVE = llsr_train(X, Y, encode=True, num_clusters=num_clusters, class_list=class_list, alpha=alpha, batch_size=batch_size)  
         feature = llsr_test(X, SAVE=SAVE)
         llsr_acc(feature, Y, SAVE)
         fr = open('../weight/'+weight_path, 'wb')
