@@ -35,6 +35,7 @@ def PixelHop_Neighbour(feature, dilate, pad):
     if pad == "none":
         res = np.zeros((S[1]-2*dilate[-1], S[2]-2*dilate[-1], S[0], 9*S[3]))
     else:
+        dilate = np.array(dilate).astype('int64')
         res = np.zeros((S[1], S[2], S[0], (8*dilate.shape[0]+1)*S[3]))
     feature = np.moveaxis(feature, 0, 2)
     for i in range(dilate[-1], feature.shape[0]-dilate[-1]):
@@ -43,9 +44,12 @@ def PixelHop_Neighbour(feature, dilate, pad):
             for d in dilate:
                 for ii in idx:
                     for jj in idx:
+                        if ii == 0 and jj == 0:
+                            continue
                         iii = i+ii*d
                         jjj = j+jj*d
                         tmp.append(feature[iii, jjj])
+            tmp.append(feature[i,j])
             tmp = np.array(tmp)
             tmp = np.moveaxis(tmp,0,1)
             res[i-dilate[-1], j-dilate[-1]] = tmp.reshape(S[0],-1)
