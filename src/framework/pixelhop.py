@@ -68,26 +68,26 @@ def Pixelhop_fit(weight_path, feature, useDC):
     weight = pca_params['Layer_0/kernel'].astype(np.float32)
     bias = pca_params['Layer_%d/bias' % 0]
     # Add bias
-    feature_w_bias = feature + 1 / np.sqrt(feature.shape[3]) * bias
+    feature = feature + 1 / np.sqrt(feature.shape[3]) * bias
     # Transform to get data for the next stage
-    transformed_feature = np.matmul(feature_w_bias, np.transpose(weight))
+    feature = np.matmul(feature, np.transpose(weight))
     if useDC == True:
         e = np.zeros((1, weight.shape[0]))
         e[0, 0] = 1
-        transformed_feature -= bias * e
-    print("       <Info>        Transformed feature shape: %s"%str(transformed_feature.shape))
+        feature -= bias * e
+    print("       <Info>        Transformed feature shape: %s"%str(feature.shape))
     print("------------------- End: Pixelhop_fit -> using %10f seconds"%(time.time()-t0))
-    return transformed_feature
+    return feature
 
 def PixelHop_Unit(feature, dilate=np.array([1]), num_AC_kernels=6, pad='reflect', weight_name='tmp.pkl', getK=False, useDC=False):
     print("=========== Start: PixelHop_Unit")
     t0 = time.time()
     feature = PixelHop_Neighbour(feature, dilate, pad)
     if getK == True:
-        saab = Saab('../weight/'+weight_name, kernel_sizes=np.array([2*dilate.shape[0]+1]), num_kernels=np.array([num_AC_kernels]), useDC=useDC)
+        saab = Saab('../weight/'+weight_name, num_kernels=np.array([num_AC_kernels]), useDC=useDC)
         saab.fit(feature)
-    transformed_feature = Pixelhop_fit('../weight/'+weight_name, feature, useDC) 
-    print("       <Info>        Output feature shape: %s"%str(transformed_feature.shape))
+    feature = Pixelhop_fit('../weight/'+weight_name, feature, useDC) 
+    print("       <Info>        Output feature shape: %s"%str(feature.shape))
     print("=========== End: PixelHop_Unit -> using %10f seconds"%(time.time()-t0))
-    return transformed_feature
+    return feature
 
