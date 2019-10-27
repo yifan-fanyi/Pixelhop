@@ -1,11 +1,12 @@
+# v2019.10.25
 # Alex
 # yifanwang0916@outlook.com
-# last update 2019.09.25
+# last update 2019.10.25
 
 # PixelHop unit
 
 # feature: <4-D array>, (N, H, W, D)
-# dilate: <int> dilate for pixelhop (default: 1)
+# dilate: <list or np.array> dilate for pixelhop (default: 1)
 # num_AC_kernels: <int> AC kernels used for Saab (default: 6)
 # pad: <'reflect' or 'none' or 'zeros'> padding method (default: 'reflect)
 # weight_name: <string> weight file (in '../weight/'+weight_name) to be saved or loaded. 
@@ -79,12 +80,12 @@ def Pixelhop_fit(weight_path, feature, useDC):
     print("------------------- End: Pixelhop_fit -> using %10f seconds"%(time.time()-t0))
     return feature
 
-def PixelHop_Unit(feature, dilate=np.array([1]), num_AC_kernels=6, pad='reflect', weight_name='tmp.pkl', getK=False, useDC=False):
+def PixelHop_Unit(feature, dilate=np.array([1]), num_AC_kernels=6, pad='reflect', weight_name='tmp.pkl', getK=False, useDC=False, batch=None):
     print("=========== Start: PixelHop_Unit")
     t0 = time.time()
     feature = PixelHop_Neighbour(feature, dilate, pad)
     if getK == True:
-        saab = Saab('../weight/'+weight_name, num_kernels=np.array([num_AC_kernels]), useDC=useDC)
+        saab = Saab('../weight/'+weight_name, num_kernels=np.array([num_AC_kernels]), useDC=useDC, batch=batch)
         saab.fit(feature)
     feature = Pixelhop_fit('../weight/'+weight_name, feature, useDC) 
     print("       <Info>        Output feature shape: %s"%str(feature.shape))

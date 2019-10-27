@@ -1,3 +1,4 @@
+# v2019.10.25
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -30,7 +31,7 @@ def compute_target_(X, Y, num_clusters, class_list, batch_size=None):
         if batch_size == None:
             kmeans = KMeans(n_clusters=num_clusters_sub, verbose=0, random_state=9).fit(feature_train)
         else:
-            kmeans = MiniBatchKMeans(n_clusters=num_clusters_sub, verbose=1, batch_size=batch_size).fit(feature_train)
+            kmeans = MiniBatchKMeans(n_clusters=num_clusters_sub, verbose=0, batch_size=batch_size).fit(feature_train)
         labels[Y==ID] = kmeans.labels_ + i*num_clusters_sub
         clus_labels[i*num_clusters_sub:(i+1)*num_clusters_sub] = ID
         centroid[i*num_clusters_sub:(i+1)*num_clusters_sub] = kmeans.cluster_centers_

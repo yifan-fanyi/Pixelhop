@@ -1,7 +1,4 @@
-# Alex
-# yifanwang0916@outlook.com
-# 2019.09.25
-
+# v2019.10.25
 import numpy as np 
 import math
 import cv2

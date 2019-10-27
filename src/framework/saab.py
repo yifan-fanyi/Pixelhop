@@ -1,3 +1,4 @@
+# v2019.10.25
 # Alex
 # yifanwang0916@outlook.com
 # 2019.09.25
@@ -6,17 +7,18 @@
 # modeiled from https://github.com/davidsonic/Interpretable_CNN
 
 import numpy as np
-from sklearn.decomposition import PCA
+from sklearn.decomposition import PCA, IncrementalPCA
 from numpy import linalg as LA
 from skimage.measure import block_reduce
 import pickle
 import time
 
 class Saab():
-    def __init__(self, pca_name, num_kernels, energy_percent=None, useDC=False):
+    def __init__(self, pca_name, num_kernels, energy_percent=None, useDC=False, batch=None):
         self.pca_name = pca_name
         self.num_kernels = num_kernels
         self.useDC = useDC
+        self.batch = batch
         self.energy_percent = energy_percent
 
     def remove_mean(self, features, axis):
@@ -24,12 +26,18 @@ class Saab():
         features = features - feature_mean
         return features, feature_mean
 
-    def find_kernels_pca(self, samples, num_kernels, energy_percent):
+    def find_kernels_pca(self, samples, num_kernels, energy_percent, batch):
         if num_kernels:
             num_components = num_kernels
-            pca = PCA(n_components=num_components, svd_solver='full')
+            if batch == None:
+                pca = IncrementalPCA(n_components=num_components, batch_size=batch)
+            else:
+                pca = PCA(n_components=num_components, svd_solver='full')
         else:
-            pca = PCA(n_components=samples.shape[1], svd_solver='full')
+            if batch == None:
+                pca = IncrementalPCA(n_components=samples.shape[1], batch_size=batch)
+            else:
+                pca = PCA(n_components=samples.shape[1], svd_solver='full')
         pca.fit(samples)
         if energy_percent:
             energy = np.cumsum(pca.explained_variance_ratio_)
@@ -40,7 +48,7 @@ class Saab():
         print("       <Info>        Energy percent: %f" % np.cumsum(pca.explained_variance_ratio_)[num_components - 1])
         return kernels, mean
 
-    def Saab_transform(self, pixelhop_feature, num_kernels, energy_percent, useDC): 
+    def Saab_transform(self, pixelhop_feature, num_kernels, energy_percent, useDC, batch): 
         S = pixelhop_feature.shape
         print("       <Info>        pixelhop_feature.shape: %s"%str(pixelhop_feature.shape))
 
@@ -54,7 +62,7 @@ class Saab():
         
         if not num_kernels is None:
             num_kernel = num_kernels[0]
-        kernels, mean = self.find_kernels_pca(pixelhop_feature, num_kernel, energy_percent)
+        kernels, mean = self.find_kernels_pca(pixelhop_feature, num_kernel, energy_percent, batch)
         num_channels = pixelhop_feature.shape[1]     
         if useDC == True:       
             dc_kernel = 1 / np.sqrt(num_channels) * np.ones((1, num_channels))
@@ -79,7 +87,8 @@ class Saab():
         pca_params = self.Saab_transform(pixelhop_feature=pixelhop_feature,
                                                 num_kernels=self.num_kernels,
                                                 energy_percent=self.energy_percent, 
-                                                useDC=self.useDC)
+                                                useDC=self.useDC,
+                                                batch=self.batch)
         fw = open(self.pca_name, 'wb')
         pickle.dump(pca_params, fw)
         fw.close()
