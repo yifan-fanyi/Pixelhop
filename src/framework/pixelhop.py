@@ -1,4 +1,4 @@
-# v2019.10.25
+# v2019.11.04 add batch support
 # Alex
 # yifanwang0916@outlook.com
 # last update 2019.10.25
@@ -12,7 +12,7 @@
 # weight_name: <string> weight file (in '../weight/'+weight_name) to be saved or loaded. 
 # getK: <bool> 0: using saab to get weight; 1: loaded pre-achieved weight
 # useDC: <bool> add a DC kernel. 0: not use (out kernel is num_AC_kernels); 1: use (out kernel is num_AC_kernels+1)
-
+# batch: <int/None> minbatch for saving memory 
 # return <4-D array>, (N, H_new, W_new, D_new)
 
 import numpy as np 
@@ -22,10 +22,10 @@ import time
 from framework.saab import Saab
 
 def PixelHop_Neighbour(feature, dilate, pad):
-    print("------------------- Start: PixelHop_Neighbour")
-    print("       <Info>        Input feature shape: %s"%str(feature.shape))
-    print("       <Info>        dilate: %s"%str(dilate))
-    print("       <Info>        padding: %s"%str(pad))
+    #print("------------------- Start: PixelHop_Neighbour")
+    #print("       <Info>        Input feature shape: %s"%str(feature.shape))
+    #print("       <Info>        dilate: %s"%str(dilate))
+    #print("       <Info>        padding: %s"%str(pad))
     t0 = time.time()
     S = feature.shape
     idx = [-1, 0, 1]
@@ -34,7 +34,8 @@ def PixelHop_Neighbour(feature, dilate, pad):
     elif pad == 'zeros':
         feature = np.pad(feature, ((0,0),(dilate[-1], dilate[-1]),(dilate[-1], dilate[-1]),(0,0)), 'constant', constant_values=0)
     if pad == "none":
-        res = np.zeros((S[1]-2*dilate[-1], S[2]-2*dilate[-1], S[0], 9*S[3]))
+        dilate = np.array(dilate).astype('int64')
+        res = np.zeros((S[1]-2*dilate[-1], S[2]-2*dilate[-1], S[0], (8*dilate.shape[0]+1)*S[3]))
     else:
         dilate = np.array(dilate).astype('int64')
         res = np.zeros((S[1], S[2], S[0], (8*dilate.shape[0]+1)*S[3]))
@@ -55,13 +56,25 @@ def PixelHop_Neighbour(feature, dilate, pad):
             tmp = np.moveaxis(tmp,0,1)
             res[i-dilate[-1], j-dilate[-1]] = tmp.reshape(S[0],-1)
     res = np.moveaxis(res, 2, 0)
-    print("       <Info>        Output feature shape: %s"%str(res.shape))
-    print("------------------- End: PixelHop_Neighbour -> using %10f seconds"%(time.time()-t0))
+    #print("       <Info>        Output feature shape: %s"%str(res.shape))
+    #print("------------------- End: PixelHop_Neighbour -> using %10f seconds"%(time.time()-t0))
     return res 
 
+def Batch_PixelHop_Neighbour(feature, dilate, pad, batch):
+    res = []
+    for i in range(0,feature.shape[0],batch):
+        if i+batch <= feature.shape[0]:
+            res.append(PixelHop_Neighbour(feature[i:i+batch], dilate, pad))
+        else:
+            res.append(PixelHop_Neighbour(feature[i:], dilate, pad))
+    res = np.array(res)
+    print(res.shape)
+    res = res.reshape(-1,res.shape[2],res.shape[3], res.shape[4])
+    return res
+
 def Pixelhop_fit(weight_path, feature, useDC):
-    print("------------------- Start: Pixelhop_fit")
-    print("       <Info>        Using weight: %s"%str(weight_path))
+    #print("------------------- Start: Pixelhop_fit")
+    #print("       <Info>        Using weight: %s"%str(weight_path))
     t0 = time.time()
     fr = open(weight_path, 'rb')
     pca_params = pickle.load(fr)
@@ -76,19 +89,36 @@ def Pixelhop_fit(weight_path, feature, useDC):
         e = np.zeros((1, weight.shape[0]))
         e[0, 0] = 1
         feature -= bias * e
-    print("       <Info>        Transformed feature shape: %s"%str(feature.shape))
-    print("------------------- End: Pixelhop_fit -> using %10f seconds"%(time.time()-t0))
+    #print("       <Info>        Transformed feature shape: %s"%str(feature.shape))
+    #print("------------------- End: Pixelhop_fit -> using %10f seconds"%(time.time()-t0))
     return feature
+
+def Batch_Pixelhop_fit(weight_name, feature, useDC, batch):
+    res = []
+    for i in range(0,feature.shape[0],batch):
+        if i+batch <= feature.shape[0]:
+            res.append(Pixelhop_fit('../weight/'+weight_name, feature[i:i+batch], useDC))
+        else:
+            res.append(Pixelhop_fit('../weight/'+weight_name, feature[i:], useDC))
+    res = np.array(res)
+    res = res.reshape(-1, res.shape[2],res.shape[3],res.shape[4])
+    return res
 
 def PixelHop_Unit(feature, dilate=np.array([1]), num_AC_kernels=6, pad='reflect', weight_name='tmp.pkl', getK=False, useDC=False, batch=None):
     print("=========== Start: PixelHop_Unit")
+    print("       <Info>        Batch size: %s"%str(batch))
     t0 = time.time()
-    feature = PixelHop_Neighbour(feature, dilate, pad)
+    if batch == None:
+        feature = PixelHop_Neighbour(feature, dilate, pad)
+    else:
+        feature = Batch_PixelHop_Neighbour(feature, dilate, pad, batch)
     if getK == True:
-        saab = Saab('../weight/'+weight_name, num_kernels=np.array([num_AC_kernels]), useDC=useDC, batch=batch)
+        saab = Saab('../weight/'+weight_name, num_kernels=num_AC_kernels, useDC=useDC, batch=batch)
         saab.fit(feature)
-    feature = Pixelhop_fit('../weight/'+weight_name, feature, useDC) 
+    if batch == None:
+        feature = Pixelhop_fit('../weight/'+weight_name, feature, useDC) 
+    else:
+        feature = Batch_Pixelhop_fit('../weight/'+weight_name, feature, useDC, batch)
     print("       <Info>        Output feature shape: %s"%str(feature.shape))
     print("=========== End: PixelHop_Unit -> using %10f seconds"%(time.time()-t0))
     return feature
-

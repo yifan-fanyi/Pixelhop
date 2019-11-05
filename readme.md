@@ -22,7 +22,10 @@ Pixelhop Unit:
 
 *`getK`* -> If use input to compute Saab kernel. (default: `True`) 
 
-*`useDC`* -> If add DC component. (default: `False`)  
+*`useDC`* -> If add DC component. (default: `False`) 
+
+*`batch`* -> Batch size. (default: `None`)  
+
 ```
 x1 = PixelHop_Unit(x, dilate=[1], pad='reflect', num_AC_kernels=9, weight_name='pixelhop1.pkl', getK=True, useDC=False)
 ```
