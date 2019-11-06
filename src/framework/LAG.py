@@ -1,4 +1,4 @@
-# v2019.10.25
+# v2019.11.04
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -17,30 +17,30 @@ from sklearn import preprocessing
 from sklearn.metrics.pairwise import euclidean_distances
 from sklearn.cluster import MiniBatchKMeans,KMeans
 from sklearn.metrics import silhouette_score
-os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 def compute_target_(X, Y, num_clusters, class_list, batch_size=None): 
     Y = Y.reshape(-1)
-    num_clusters_sub = int(num_clusters/len(class_list))
     labels = np.zeros((X.shape[0]))
-    clus_labels = np.zeros((num_clusters,))
-    centroid = np.zeros((num_clusters, X.shape[1]))
+    clus_labels = np.zeros((np.sum(np.array(num_clusters)),))
+    centroid = np.zeros((np.sum(np.array(num_clusters)), X.shape[1]))
+    start = 0
     for i in range(len(class_list)):
         ID = class_list[i]
         feature_train = X[Y==ID]
         if batch_size == None:
-            kmeans = KMeans(n_clusters=num_clusters_sub, verbose=0, random_state=9).fit(feature_train)
+            kmeans = KMeans(n_clusters=num_clusters[i], verbose=0, random_state=9).fit(feature_train)
         else:
-            kmeans = MiniBatchKMeans(n_clusters=num_clusters_sub, verbose=0, batch_size=batch_size).fit(feature_train)
-        labels[Y==ID] = kmeans.labels_ + i*num_clusters_sub
-        clus_labels[i*num_clusters_sub:(i+1)*num_clusters_sub] = ID
-        centroid[i*num_clusters_sub:(i+1)*num_clusters_sub] = kmeans.cluster_centers_
+            kmeans = MiniBatchKMeans(n_clusters=num_clusters[i], verbose=0, batch_size=batch_size).fit(feature_train)
+        labels[Y==ID] = kmeans.labels_ + start
+        clus_labels[start:start+num_clusters[i]] = ID
+        centroid[start:start+num_clusters[i]] = kmeans.cluster_centers_
+        start += num_clusters[i]
         s = silhouette_score(feature_train, kmeans.labels_)
         print ("       <Info>        silhouette_score: %s"%str(s))
         print ("       <Info>        FINISH KMEANS: %s"%str(i))
     return labels, clus_labels.astype(int), centroid
 
-def llsr_train(X, Y, encode=True, num_clusters=10, class_list=None, alpha=10, batch_size=None):
+def llsr_train(X, Y, encode=True, num_clusters=[10,10], class_list=None, alpha=10, batch_size=None):
     SAVE = {} 
     labels_train, clus_labels, centroid = compute_target_(X, Y, num_clusters, class_list, batch_size=batch_size)    
     scaler = preprocessing.StandardScaler().fit(X)  
@@ -89,7 +89,7 @@ def llsr_test(X, SAVE=None, weight_path=None):
     X = X + SAVE['LLSR bias']
     return X
 
-def LAG_Unit(X, Y=None, class_list=None, weight_path="LAG_weight.pkl", num_clusters=50, alpha=5, batch_size=None, train=True):
+def LAG_Unit(X, Y=None, class_list=None, weight_path="LAG_weight.pkl", num_clusters=[10,10], alpha=5, batch_size=None, train=True):
 #                  feature: training features or testing features
 #                  class_list: list of class labels
 #                  SAVE: store parameters
