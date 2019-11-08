@@ -28,9 +28,9 @@ def compute_target_(X, Y, num_clusters, class_list, batch_size=None):
         ID = class_list[i]
         feature_train = X[Y==ID]
         if batch_size == None:
-            kmeans = KMeans(n_clusters=num_clusters[i], verbose=0, random_state=9).fit(feature_train)
+            kmeans = KMeans(n_clusters=num_clusters[i], verbose=0, random_state=9, n_jobs=10).fit(feature_train)
         else:
-            kmeans = MiniBatchKMeans(n_clusters=num_clusters[i], verbose=0, batch_size=batch_size).fit(feature_train)
+            kmeans = MiniBatchKMeans(n_clusters=num_clusters[i], verbose=0, batch_size=batch_size, n_init=5).fit(feature_train)
         labels[Y==ID] = kmeans.labels_ + start
         clus_labels[start:start+num_clusters[i]] = ID
         centroid[start:start+num_clusters[i]] = kmeans.cluster_centers_
