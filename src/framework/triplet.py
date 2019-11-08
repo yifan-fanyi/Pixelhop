@@ -1,4 +1,4 @@
-# v2019.11.08.v1
+# v2019.11.07
 # triplet loss regression
 # input :
 #   X           -> Anchor feature : Positive feature : Negative feature
@@ -38,10 +38,10 @@ def Triplet_model(new_dim, input_shape, optimizer):
 def Triplet_train(X, Y, saved_name, new_dim, optimizer, epochs):
     model = Triplet_model(new_dim, (X.shape[1],), optimizer)
     model.summary()
-    if Y != None:
-        Y = Y*np.ones((X.shape[0], new_dim))
-    else:
+    if Y.any() == None:
         Y = np.ones((X.shape[0], new_dim))
+    else:
+        Y = Y * np.ones((X.shape[0], new_dim))
     for i in range(0, epochs):
         model.fit(X, Y, verbose=1, batch_size=X.shape[0], epochs=1)   
         Y = model.predict(X)
