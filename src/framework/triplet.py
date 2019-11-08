@@ -1,4 +1,4 @@
-# v2019.11.06
+# v2019.11.08.v1
 # triplet loss regression
 # input :
 #   X           -> Anchor feature : Positive feature : Negative feature
@@ -16,6 +16,7 @@ batch_size = 1
 a1 = 0.6
 
 def triplet_loss(y_true, y_pred):
+    y_true = K.l2_normalize(y_true,axis=1)
     y_pred = K.l2_normalize(y_pred,axis=1)
     batch = batch_size
     ref1 = y_pred[0:batch,:]
@@ -34,23 +35,32 @@ def Triplet_model(new_dim, input_shape, optimizer):
     model.compile(optimizer=optimizer,loss=triplet_loss)
     return model
 
-def Triplet_train(X, saved_name, new_dim, optimizer):
+def Triplet_train(X, Y, saved_name, new_dim, optimizer, epochs):
     model = Triplet_model(new_dim, (X.shape[1],), optimizer)
-    model.fit(X, np.ones([batch_size*3, new_dim]), verbose=0)   
+    model.summary()
+    if Y != None:
+        Y = Y*np.ones((X.shape[0], new_dim))
+    else:
+        Y = np.ones((X.shape[0], new_dim))
+    for i in range(0, epochs):
+        model.fit(X, Y, verbose=1, batch_size=X.shape[0], epochs=1)   
+        Y = model.predict(X)
     model.save_weights('../weight/'+saved_name)
+    print(Y.shape)
 
-def Triplet_test(X, saved_name, new_dim, optimizer):
+def Triplet_test(X, saved_name, new_dim, optimizer, epochs):
     model = Triplet_model(new_dim, (X.shape[1],), optimizer)
     model.load_weights('../weight/'+saved_name, by_name=True)
-    return model.predict(X)
+    X = model.predict(X)
+    return X
 
-def Triplet_unit(X, new_dim=10, a=0.6, train=True, saved_name='Triplet.h5', optimizer='sgd'):
+def Triplet_unit(X, Y=None, new_dim=10, a=0.6, train=True, epochs=1000, saved_name='Triplet.h5', optimizer='sgd'):
     global batch_size, a1
     batch_size = X.shape[0] // 3
     a1 = a
     if train == True:
-        Triplet_train(X, saved_name, new_dim, optimizer)
-    X = Triplet_test(X, saved_name, new_dim, optimizer)
+        Triplet_train(X, Y, saved_name, new_dim, optimizer, epochs)
+    X = Triplet_test(X, saved_name, new_dim, optimizer, epochs)
     return X
 
 if __name__ == "__main__":
