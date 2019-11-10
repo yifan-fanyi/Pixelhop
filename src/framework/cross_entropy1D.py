@@ -23,9 +23,9 @@ class Cross_Entropy1D():
         mybin = np.zeros((self.num_bin, self.num_class))
         gst = np.zeros((self.num_class))
         if self.batch_size == None:
-            kmeans = KMeans(n_clusters=self.num_bin, verbose=1, random_state=9).fit(x)
+            kmeans = KMeans(n_clusters=self.num_bin, verbose=0, random_state=9).fit(x)
         else:
-            kmeans = MiniBatchKMeans(n_clusters=self.num_bin, verbose=1, batch_size=self.batch_size).fit(x)
+            kmeans = MiniBatchKMeans(n_clusters=self.num_bin, verbose=0, batch_size=self.batch_size).fit(x)
         label = kmeans.labels_
         for l in range(0, self.num_bin):
             st = y[label == l]
@@ -55,9 +55,9 @@ class Cross_Entropy1D():
         y = np.moveaxis(y, 0, 1)
         H = 0
         for c in range(0, self.num_class):
-            y = (y == c)
+            yy = (y == c)
             p = prob[c]
-            H += np.mean(y * p, axis=1)
+            H += np.mean(yy * p, axis=1)
         if class_weight != None:
             class_weight = np.array(class_weight)
             H *= class_weight.reshape(class_weight.shape[0],1) * self.num_class

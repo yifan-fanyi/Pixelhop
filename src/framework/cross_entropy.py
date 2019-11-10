@@ -24,7 +24,7 @@ class Cross_Entropy():
         b = x.astype('int64')
         b[b == self.num_bin] -= 1
         mybin[b,y] += 1.
-        for l in range(0, self.num_class):
+        for l in range(0,self.num_class):
             p = np.array(y[ y==l ]).shape[0]
             mybin[:,l] /= (float)(p)
         return np.argmax(mybin, axis=1)
@@ -40,17 +40,17 @@ class Cross_Entropy():
         return prob
 
     def compute(self, x, y, class_weight=None):
-        x = x.astype('float32')
+        x = x.astype('float64')
         y = y.astype('int64')
         prob = self.compute_prob(x, y)
         prob = -1 * np.log10(prob + 1e-5) / np.log10(self.num_class)
         y = np.moveaxis(y, 0, 1)
         H = np.zeros((self.num_class, x.shape[1]))
         for c in range(0, self.num_class):
-            y = y == c
+            yy = y == c
             p = prob[c].reshape(prob.shape[1], 1)
-            p = p.repeat(y.shape[1], axis=1)
-            H[c] += np.mean(y * p, axis=1)
+            p = p.repeat(yy.shape[1], axis=1)
+            H[c] += np.mean(yy * p, axis=1)
         if class_weight != None:
             class_weight = np.array(class_weight)
             H *= class_weight.reshape(class_weight.shape[0],1) * self.num_class
