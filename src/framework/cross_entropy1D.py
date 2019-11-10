@@ -51,16 +51,16 @@ class Cross_Entropy1D():
         x = x.astype('float64')
         y = y.astype('int64')
         prob = self.compute_prob(x, y)
-        prob = -1 * np.log10(prob + 1e-5) / np.log10(self.num_class)
+        prob = -1 * np.log10(prob + 1e-10) / np.log10(self.num_class)
         y = np.moveaxis(y, 0, 1)
-        H = 0
+        H = np.zeros(self.num_class)
         for c in range(0, self.num_class):
             yy = (y == c)
             p = prob[c]
-            H += np.mean(yy * p, axis=1)
+            H[c] = np.mean(yy * p, axis=1)
         if class_weight != None:
-            class_weight = np.array(class_weight)
-            H *= class_weight.reshape(class_weight.shape[0],1) * self.num_class
+            class_weight = np.array(class_weight).reshape(self.num_class)
+            H *= class_weight * self.num_class
         return np.sum(H, axis=0)
 
 if __name__ == "__main__":
