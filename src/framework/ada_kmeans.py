@@ -1,4 +1,4 @@
-# v2019.11.12.v1
+# v2019.11.12.v2
 import os
 import sys
 import numpy as np
@@ -65,11 +65,11 @@ def Init_By_Class(X, Y, num_class):
     H = []
     Hidx = [0]
     for i in range(np.unique(Y).shape[0]):
-        data.append( {'Data': X[kmeans.labels_ == i],
-                'Label': Y[kmeans.labels_ == i],
-                'Centroid': kmeans.cluster_centers_[i],
-                'H': Comupte_Cross_Entropy(X[kmeans.labels_ == i], Y[kmeans.labels_ == i], num_class),
-                'ID': str(i)})
+        data.append({'Data': X[kmeans.labels_ == i],
+                    'Label': Y[kmeans.labels_ == i],
+                    'Centroid': kmeans.cluster_centers_[i],
+                    'H': Comupte_Cross_Entropy(X[kmeans.labels_ == i], Y[kmeans.labels_ == i], num_class),
+                    'ID': str(i)})
         H.append(data[i]['H'])
         Hidx.append(Hidx[-1]+1)
     return data, H, Hidx
@@ -120,12 +120,14 @@ def Multi_Trial(X, sep_num=2, batch_size=None, trial=6, num_class=2):
 
 def Leaf_Node_Regression(data, Hidx, num_class):
     for i in range(len(Hidx)-1):
-        data[Hidx[i]]['Regressor'] = Regression_Method(X, Y, num_class)
+        data[Hidx[i]]['Regressor'] = Regression_Method(data[Hidx[i]]['Data'], data[Hidx[i]]['Label'], num_class)
+        data[Hidx[i]]['Data'] = [] #no need to store raw data any more
+        data[Hidx[i]]['Label'] = []
     return data
 
-def Ada_KMeans(X, Y, trial=6, batch_size=10000, minS=0.1, maxN=50, limit=0.5, maxiter=50):
+def Ada_KMeans(X, Y, trial=6, batch_size=10000, minS=300, maxN=50, limit=0.5, maxiter=50):
     # trial: # of runs in each separation
-    # minS: minimum percent of samples in each cluster
+    # minS: minimum number of samples in each cluster
     # maxN: max number of leaf nodes (centroids)
     # limit: stop splitting when the max CE<limit
     # max iteration
@@ -134,7 +136,7 @@ def Ada_KMeans(X, Y, trial=6, batch_size=10000, minS=0.1, maxN=50, limit=0.5, ma
     print("       <Info>        Input shape: %s"%str(X.shape))
     print("       <Info>        Trial: %s"%str(trial))
     print("       <Info>        Batch size: %s"%str(batch_size))
-    print("       <Info>        Minimum percent of samples in each cluster: %s"%str(minS))
+    print("       <Info>        Minimum number of samples in each cluster: %s"%str(minS))
     print("       <Info>        Max number of leaf nodes: %s"%str(batch_size))
     print("       <Info>        Stop splitting when the max CE<limit: %s"%str(limit))
     print("       <Info>        Max iteration: %s"%str(maxiter))
@@ -152,7 +154,7 @@ def Ada_KMeans(X, Y, trial=6, batch_size=10000, minS=0.1, maxN=50, limit=0.5, ma
         if Continue_split(H[idx], limit) == False: # continue to split?
             print("       <Info>        Finish splitting!")
             break
-        if data[Hidx[idx]]['Data'].shape[0] < int(minS*num_sample): # if this cluster has too few sample, change the next largest
+        if data[Hidx[idx]]['Data'].shape[0] < minS: # if this cluster has too few sample, change the next largest
             print("       <Warning>        Iter %s: Too small! continue for the next largest"%str(myiter))
             H[idx] = -H[idx]
             continue
