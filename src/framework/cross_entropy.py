@@ -1,4 +1,5 @@
 # v2019.10.27.2
+# <2019.11.12> old cross entropy, method of compute cross entropy has be changed
 # Alex
 #
 # Reference:
