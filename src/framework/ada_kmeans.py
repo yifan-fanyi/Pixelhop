@@ -211,11 +211,11 @@ def Ada_KMeans(X, Y, path='tmp.pkl', train=True, sep_num=2, trial=6, batch_size=
     if train == True:
         data = Ada_KMeans_train(X, Y, sep_num=sep_num, trial=trial, batch_size=batch_size, minS=minS, maxN=maxN, limit=limit, maxiter=maxiter)
         data = List2Dict(data)
-        f = open('../weight'+path, 'wb')
+        f = open('../weight/'+path, 'wb')
         pickle.dump(data, f)
         f.close()
     else:
-        f = open('../weight'+path, 'rb')
+        f = open('../weight/'+path, 'rb')
         data = pickle.load(f)
         f.close()
     X = Ada_KMeans_test(X, data, sep_num)
