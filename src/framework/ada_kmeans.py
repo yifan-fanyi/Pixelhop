@@ -205,7 +205,7 @@ def Ada_KMeans_test(X, data, sep_num):
         pred.append(data[Ada_KMeans_Iter_test(X[i], '', data, sep_num)]['Regressor'].predict_proba(X[i].reshape(1,-1)))
     return np.array(pred)
 
-def Ada_KMeans(X, Y, path='tmp.pkl', train=True, sep_num=2, trial=6, batch_size=10000, minS=300, maxN=50, limit=0.5, maxiter=50):
+def Ada_KMeans(X, Y=None, path='tmp.pkl', train=True, sep_num=2, trial=6, batch_size=10000, minS=300, maxN=50, limit=0.5, maxiter=50):
     print("=========== Start: Ada_KMeans")
     print("       <Info>        Input shape: %s"%str(X.shape))
     print("       <Info>        train: %s"%str(train))
