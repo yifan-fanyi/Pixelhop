@@ -1,4 +1,4 @@
-# v2019.11.04 add batch support
+# v2019.11.13 resolve issue when using bais
 # Alex
 # yifanwang0916@outlook.com
 # 2019.09.25
@@ -97,7 +97,7 @@ class Saab():
             kernels = np.concatenate((dc_kernel, kernels), axis=0)
 
         if self.needBias == True:
-            pixelhop_feature = self.Transform(self, pixelhop_feature, kernels)
+            pixelhop_feature = self.Transform(pixelhop_feature, kernels)
             bias = LA.norm(pixelhop_feature, axis=1)
             bias = np.max(bias)
             pca_params['Layer_%d/bias' % 0] = bias

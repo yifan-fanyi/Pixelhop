@@ -1,4 +1,4 @@
-# v2019.11.04 add batch support
+# v2019.11.13 sovled issue in batch
 # Alex
 # yifanwang0916@outlook.com
 # last update 2019.10.25
@@ -61,21 +61,22 @@ def PixelHop_Neighbour(feature, dilate, pad):
     return res 
 
 def Batch_PixelHop_Neighbour(feature, dilate, pad, batch):
-    res = []
-    for i in range(0,feature.shape[0],batch):
+    if batch <= feature.shape[0]:
+        res = PixelHop_Neighbour(feature[0:batch], dilate, pad)
+    else:
+        res = PixelHop_Neighbour(feature, dilate, pad)
+        return res
+    for i in range(batch,feature.shape[0],batch):
         if i+batch <= feature.shape[0]:
-            res.append(PixelHop_Neighbour(feature[i:i+batch], dilate, pad))
+            res = np.concatenate((res, PixelHop_Neighbour(feature[i:i+batch], dilate, pad)), axis=0)
         else:
-            res.append(PixelHop_Neighbour(feature[i:], dilate, pad))
-    res = np.array(res)
-    print(res.shape)
-    res = res.reshape(-1,res.shape[2],res.shape[3], res.shape[4])
+            res = np.concatenate((res, PixelHop_Neighbour(feature[i:], dilate, pad)), axis=0)
     return res
 
 def Pixelhop_fit(weight_path, feature, useDC):
     #print("------------------- Start: Pixelhop_fit")
     #print("       <Info>        Using weight: %s"%str(weight_path))
-    t0 = time.time()
+    #t0 = time.time()
     fr = open(weight_path, 'rb')
     pca_params = pickle.load(fr)
     fr.close()
@@ -94,14 +95,16 @@ def Pixelhop_fit(weight_path, feature, useDC):
     return feature
 
 def Batch_Pixelhop_fit(weight_name, feature, useDC, batch):
-    res = []
+    if batch <= feature.shape[0]:
+        res = Pixelhop_fit('../weight/'+weight_name, feature[0:batch], useDC)
+    else:
+        res = Pixelhop_fit('../weight/'+weight_name, feature, useDC)
+        return res
     for i in range(0,feature.shape[0],batch):
         if i+batch <= feature.shape[0]:
-            res.append(Pixelhop_fit('../weight/'+weight_name, feature[i:i+batch], useDC))
+            res = np.concatenate((res, Pixelhop_fit('../weight/'+weight_name, feature[i:i+batch], useDC)), axis=0)
         else:
-            res.append(Pixelhop_fit('../weight/'+weight_name, feature[i:], useDC))
-    res = np.array(res)
-    res = res.reshape(-1, res.shape[2],res.shape[3],res.shape[4])
+            res = np.concatenate((Pixelhop_fit('../weight/'+weight_name, feature[i:], useDC)), axis=0)
     return res
 
 def PixelHop_Unit(feature, dilate=np.array([1]), num_AC_kernels=6, pad='reflect', weight_name='tmp.pkl', getK=False, useDC=False, batch=None):
