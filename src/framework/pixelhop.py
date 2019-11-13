@@ -100,7 +100,7 @@ def Batch_Pixelhop_fit(weight_name, feature, useDC, batch):
     else:
         res = Pixelhop_fit('../weight/'+weight_name, feature, useDC)
         return res
-    for i in range(0,feature.shape[0],batch):
+    for i in range(batch,feature.shape[0],batch):
         if i+batch <= feature.shape[0]:
             res = np.concatenate((res, Pixelhop_fit('../weight/'+weight_name, feature[i:i+batch], useDC)), axis=0)
         else:

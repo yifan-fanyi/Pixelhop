@@ -65,7 +65,8 @@ final update: 2019.11.11
 ce = Cross_Entropy(num_class=2, num_bin=10)
 H = ce.compute(x, y, class_weight=None)
 ```
-Reference: Manimaran A, Ramanathan T, You S, et al. Visualization, Discriminability and Applications of Interpretable Saak Features[J]. 2019.
+Reference: Manimaran A, Ramanathan T, You S, et al. Visualization, Discriminability and Applications of Interpretable Saak Features[J]. 2019.  
+
 *`num_class`* -> number of class  
 *`num_bin`* -> number of bin (default; `10`)
 
