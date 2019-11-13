@@ -12,6 +12,8 @@ from sklearn.cluster import MiniBatchKMeans, KMeans
 from sklearn.metrics import log_loss as LL
 from collections import Counter
 from sklearn.linear_model import LogisticRegression
+from sklearn.metrics.pairwise import euclidean_distances
+
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -48,7 +50,7 @@ def Comupte_Cross_Entropy(X, Y, num_class, num_bin=32):
         tmp = Y[idx]
         for j in range(num_class):
             prob[i, j] = (float)(tmp[tmp == j].shape[0]) / ((float)(Y[Y==j].shape[0]) + 1e-5)
-    prob = (prob - np.min(prob, axis=1).reshape(-1,1))/(np.max(prob, axis=1).reshape(-1,1) - np.min(prob, axis=1).reshape(-1,1) + 1e-5)
+    prob = (prob)/(np.sum(prob, axis=1).reshape(-1,1) + 1e-5)
     true_indicator = np.zeros((samp_num, num_class))
     true_indicator[np.arange(samp_num), Y] = 1
     probab = prob[kmeans.labels_]
@@ -125,15 +127,14 @@ def Leaf_Node_Regression(data, Hidx, num_class):
         data[Hidx[i]]['Label'] = []
     return data
 
-def Ada_KMeans(X, Y, trial=6, batch_size=10000, minS=300, maxN=50, limit=0.5, maxiter=50):
+def Ada_KMeans_train(X, Y, sep_num=2, trial=6, batch_size=10000, minS=300, maxN=50, limit=0.5, maxiter=50):
     # trial: # of runs in each separation
     # minS: minimum number of samples in each cluster
     # maxN: max number of leaf nodes (centroids)
     # limit: stop splitting when the max CE<limit
     # max iteration
-    print("=========== Start: Ada_KMeans")
+    print("------------------- Start: Ada_KMeans_train")
     t0 = time.time()
-    print("       <Info>        Input shape: %s"%str(X.shape))
     print("       <Info>        Trial: %s"%str(trial))
     print("       <Info>        Batch size: %s"%str(batch_size))
     print("       <Info>        Minimum number of samples in each cluster: %s"%str(minS))
@@ -143,7 +144,6 @@ def Ada_KMeans(X, Y, trial=6, batch_size=10000, minS=300, maxN=50, limit=0.5, ma
     # H: <list> entropy of nodes can be split
     # Hidx: <list> location of corresponding H in data
     num_class = np.unique(Y).shape[0]
-    num_sample = X.shape[0]
     data, H, Hidx = Init_By_Class(X, Y, num_class)
     X, Y = [], []
     N ,myiter = 1, 1
@@ -158,7 +158,7 @@ def Ada_KMeans(X, Y, trial=6, batch_size=10000, minS=300, maxN=50, limit=0.5, ma
             print("       <Warning>        Iter %s: Too small! continue for the next largest"%str(myiter))
             H[idx] = -H[idx]
             continue
-        subX = Multi_Trial(data[Hidx[idx]], batch_size=batch_size, trial=trial, num_class=num_class)
+        subX = Multi_Trial(data[Hidx[idx]], sep_num=sep_num, batch_size=batch_size, trial=trial, num_class=num_class)
         if len(subX)!=0:
             # save memory, do not save X, Y multi times
             data[Hidx[idx]]['Data'] = []
@@ -176,45 +176,58 @@ def Ada_KMeans(X, Y, trial=6, batch_size=10000, minS=300, maxN=50, limit=0.5, ma
             print("       <Warning>        Iter %s: Don't split! continue for the next largest"%str(myiter))
             H[idx] = -H[idx]
     data = Leaf_Node_Regression(data, Hidx, num_class)
-    print("=========== End: Ada_KMeans -> using %10f seconds"%(time.time()-t0))
-    return data
+    print("------------------- End: Ada_KMeans_train -> using %10f seconds"%(time.time()-t0))
+    return data           
 
-'''
-def Merge(Y, data, Hidx):
-    centroid = []
-    Y = []
-    cluster_label = []
-    n0 = 9
-    n1 = 1
-    for i in range(0, len(Hidx)-1):
-        Y.append(data[Hidx[i]]['Label'])
-        centroid.append(data[Hidx[i]]['Centroid'].reshape(-1))
-        t = data[Hidx[i]]['Label']
-        if t[t == 0].shape[0]/n0 > t[t == 1].shape[0]/n1:
-            cluster_label.append(0)
-        elif t[t == 0].shape[0]/n0 < t[t == 1].shape[0]/n1:
-            cluster_label.append(1)
-        if i == 0:
-            X = data[Hidx[i]]['Data']
-            label = i*np.ones((data[Hidx[i]]['Label'].shape[0],1))
-        else:
-            X = np.concatenate((X,data[Hidx[i]]['Data']),axis=0)
-            label = np.concatenate((label, i*np.ones((data[Hidx[i]]['Label'].shape[0],1))), axis=0)    
-    Y = np.array(Y)
-    Y = Y.reshape(-1,1)
-    centroid = np.array(centroid)
-    cluster_label = np.array(cluster_label)
-    cluster_label = cluster_label.reshape(-1,1)
-    return X, Y, label, centroid, cluster_label
+# list to dictionary
+def List2Dict(data):
+    res = {}
+    for i in range(len(data)):
+        res[data[i]['ID']] = data[i]
+    return res
 
-'''
+def Ada_KMeans_Iter_test(X, key, data, sep_num):
+    minD = 100000000.
+    for i in range(sep_num):
+        if 'Regressor' in data[key+str(i)]:
+            return key+str(i)
+        d = euclidean_distances(X.reshape(1,-1), d['Centroid'].reshape(1,-1))
+        if minD > d:
+            minD = d
+            key = d['ID']
+    return Ada_KMeans_Iter_test(X, key, data, sep_num)
+
+def Ada_KMeans_test(X, data, sep_num):
+    pred = []
+    for i in range(X.shape[0]):
+        pred.append(data[Ada_KMeans_Iter_test(X[i], '', data, sep_num)]['Regressor'].predict(X[i].reshape(1,-1)))
+    return np.array(pred)
+
+def Ada_KMeans(X, Y, path='tmp.pkl', train=True, sep_num=2, trial=6, batch_size=10000, minS=300, maxN=50, limit=0.5, maxiter=50):
+    print("=========== Start: Ada_KMeans")
+    print("       <Info>        Input shape: %s"%str(X.shape))
+    print("       <Info>        train: %s"%str(train))
+    t0 = time.time()
+    if train == True:
+        data = Ada_KMeans_train(X, Y, sep_num=sep_num, trial=trial, batch_size=batch_size, minS=minS, maxN=maxN, limit=limit, maxiter=maxiter)
+        data = List2Dict(data)
+        f = open('../weight'+path, 'wb')
+        pickle.dump(data, f)
+        f.close()
+    else:
+        f = open('../weight'+path, 'rb')
+        data = pickle.load(f)
+        f.close()
+    X = Ada_KMeans_test(X, data, sep_num)
+    print("=========== End: Ada_KMeans_train -> using %10f seconds"%(time.time()-t0))
+    return X
 
 if __name__ == "__main__":
     import cv2
     X = cv2.imread('../../data/test.jpg')
     X = cv2.resize(X, (40,40))
     X = X.reshape(-1,3)
-    Y = np.random.randint(2,size=X.shape[0])
+    Y = np.random.randint(2, size=X.shape[0])
     '''
     print(" \n> This is a test enample: ")
     X = np.array([[-1, -1, 1], [-1, -2, 1], [-2, -1, 1], [-2, -2, 1], [1, 1, 5], [2, 3, 4]])
