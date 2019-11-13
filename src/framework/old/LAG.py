@@ -6,7 +6,7 @@ Created on Sat Sep 28 17:49:47 2019
 
 @author: yueru
 """
-# modified by Alex 2019.10.11
+# modified by Alex 2019.11.09
 
 import os
 import numpy as np
@@ -17,6 +17,64 @@ from sklearn import preprocessing
 from sklearn.metrics.pairwise import euclidean_distances
 from sklearn.cluster import MiniBatchKMeans,KMeans
 from sklearn.metrics import silhouette_score
+import matplotlib.pyplot as plt
+from yellowbrick.cluster import SilhouetteVisualizer
+
+import warnings
+warnings.filterwarnings('ignore')
+
+# visualization, line88
+def myplt(name, feature,num_clusters):
+    model = KMeans()
+    visualizer = KElbowVisualizer(model, k=(4,30))
+    visualizer.fit(feature)
+    visualizer.show(outpath=name)
+    plt.clf() 
+    model = KMeans(n_clusters=num_clusters, verbose=0, random_state=9)
+    visualizer = SilhouetteVisualizer(model, colors='yellowbrick')
+    visualizer.fit(feature)
+    visualizer.show(outpath='sv'+name)
+    plt.clf()
+    
+# remove cluster with too few samples, line106
+def select1(labels_train, clus_labels, centroid, Y, X):
+    c0 = 0
+    cl= []
+    cd= []
+    n0 = Y[Y==0].shape[0]
+    n1 = Y[Y==1].shape[0]
+    for i in range(0,centroid.shape[0]):
+        if clus_labels[i] == 0:
+            if labels_train[labels_train == i].shape[0] > 0.02*n0:
+                if c0 == 0:
+                    l = labels_train[labels_train == i]
+                    x = X[labels_train == i]
+                    y = Y[labels_train == i]
+                    c0=1
+                else:
+                    l = np.concatenate((l,labels_train[labels_train == i]),axis=0)
+                    x = np.concatenate((x,X[labels_train == i]),axis=0)
+                    y = np.concatenate((y,Y[labels_train == i]),axis=0)
+                cl.append(clus_labels[i])
+                cd.append(centroid[i])
+            else:
+                print("remove ",clus_labels[i], labels_train[labels_train == i].shape[0])
+        else:
+            if labels_train[labels_train == i].shape[0] > 0.02*n1:
+                if c0 == 0:
+                    l = labels_train[labels_train == i]
+                    x = X[labels_train == i]
+                    y = Y[labels_train == i]
+                    c0=1
+                else:
+                    l = np.concatenate((l,labels_train[labels_train == i]),axis=0)
+                    x = np.concatenate((x,X[labels_train == i]),axis=0)
+                    y = np.concatenate((y,Y[labels_train == i]),axis=0)
+                cl.append(clus_labels[i])
+                cd.append(centroid[i])
+            else:
+                print("remove ",clus_labels[i], labels_train[labels_train == i].shape[0])
+    return np.array(l).reshape(-1), np.array(cl).reshape(-1), np.array(cd), x, y
 
 def compute_target_(X, Y, num_clusters, class_list, batch_size=None): 
     Y = Y.reshape(-1)
@@ -27,6 +85,7 @@ def compute_target_(X, Y, num_clusters, class_list, batch_size=None):
     for i in range(len(class_list)):
         ID = class_list[i]
         feature_train = X[Y==ID]
+        #myplt(str(i)+"_"+str(time.time())+'.png', feature_train, num_clusters[i])
         if batch_size == None:
             kmeans = KMeans(n_clusters=num_clusters[i], verbose=0, random_state=9, n_jobs=10).fit(feature_train)
         else:
@@ -44,7 +103,7 @@ def llsr_train(X, Y, encode=True, num_clusters=[10,10], class_list=None, alpha=1
     SAVE = {} 
     labels_train, clus_labels, centroid = compute_target_(X, Y, num_clusters, class_list, batch_size=batch_size)    
     scaler = preprocessing.StandardScaler().fit(X)  
-
+    #labels_train, clus_labels, centroid ,X,Y= select1(labels_train, clus_labels, centroid, Y, X)
     if encode:
         labels_train_onehot = np.zeros((labels_train.shape[0], clus_labels.shape[0]))
         for i in range(labels_train.shape[0]):

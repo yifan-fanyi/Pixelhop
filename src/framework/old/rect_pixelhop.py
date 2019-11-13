@@ -77,14 +77,14 @@ def rect_Pixelhop_fit(weight_path, feature, useDC):
     print("------------------- End: rect_Pixelhop_fit -> using %10f seconds"%(time.time()-t0))
     return transformed_feature
 
-def rect_PixelHop_Unit(feature, xdilate=1, ydilate=1, num_AC_kernels=6, pad='reflect', weight_name='tmp.pkl', getK=False, useDC=False):
+def rect_PixelHop_Unit(feature, xdilate=[1], ydilate=[1], num_AC_kernels=6, pad='reflect', weight_name='tmp.pkl', getK=False, useDC=False):
     print("=========== Start: rect_PixelHop_Unit")
     t0 = time.time()
-    feature = rect_PixelHop_8_Neighbour(feature, xdilate, ydilate, pad)
+    feature = rect_PixelHop_8_Neighbour(feature, xdilate[0], ydilate[0], pad)
     if getK == True:
         saab = Saab('../weight/'+weight_name, kernel_sizes=np.array([3]), num_kernels=np.array([num_AC_kernels]), useDC=useDC)
         saab.fit(feature)
-    transformed_feature = Pixelhop_fit('../weight/'+weight_name, feature, useDC) 
+    transformed_feature = rect_Pixelhop_fit('../weight/'+weight_name, feature, useDC) 
     print("       <Info>        Output feature shape: %s"%str(transformed_feature.shape))
     print("=========== End: rect_PixelHop_Unit -> using %10f seconds"%(time.time()-t0))
     return transformed_feature

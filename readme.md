@@ -29,6 +29,7 @@ Pixelhop Unit:
 ```
 x1 = PixelHop_Unit(x, dilate=[1], pad='reflect', num_AC_kernels=9, weight_name='pixelhop1.pkl', getK=True, useDC=False)
 ```
+## old code, do not maintain or used
 LAG Unit:
 
 *`X`* -> Input data matrix, 2-D tensor `(N,D)`
@@ -48,6 +49,5 @@ LAG Unit:
 ```
 x1=LAG_Unit(x,train_labels=train_labels, class_list=class_list,SAVE=SAVE,num_clusters=50,alpha=5,Train=True)
 ```
-
-## Example
-One example is shown in `./src/example.py`. 
+### Example
+One example is shown in `./src/LAG_example.py`. 
