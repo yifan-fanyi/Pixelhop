@@ -19,7 +19,7 @@ warnings.filterwarnings('ignore')
 
 # method of leaf node regression
 def Regression_Method(X, Y, num_class):
-    return LogisticRegression(random_state=0, solver='lbfgs', multi_class='multinomial',class_weight='balanced').fit(X, Y.reshape(-1,))
+    return LogisticRegression(random_state=0, solver='lbfgs', multi_class='multinomial',class_weight='balanced', n_jobs=20).fit(X, Y.reshape(-1,))
 
 # check entropy of meet the limits
 def Continue_split(H, limit):
@@ -148,7 +148,7 @@ def Ada_KMeans_train(X, Y, sep_num=2, trial=6, batch_size=10000, minS=300, maxN=
     X, Y = [], []
     N ,myiter = 1, 1
     print("\n       <Info>        Start iteration")
-    while N < maxN and myiter < maxiter:
+    while N < maxN and myiter < maxiter+1:
         print("       <Info>        Iter %s"%(str(myiter)))
         idx = np.argmax(np.array(H))
         if Continue_split(H[idx], limit) == False: # continue to split?
@@ -186,21 +186,23 @@ def List2Dict(data):
         res[data[i]['ID']] = data[i]
     return res
 
-def Ada_KMeans_Iter_test(X, key, data, sep_num):
-    minD = 100000000.
+def Ada_KMeans_Iter_test(X, key_parent, data, sep_num=2):
+    centroid = []
+    key_child = []
     for i in range(sep_num):
-        if 'Regressor' in data[key+str(i)]:
-            return key+str(i)
-        d = euclidean_distances(X.reshape(1,-1), d['Centroid'].reshape(1,-1))
-        if minD > d:
-            minD = d
-            key = data['ID']
+        centroid.append(data[key_parent+str(i)]['Centroid'].reshape(-1))
+        key_child.append(key_parent+str(i))
+    centroid = np.array(centroid)
+    dist = euclidean_distances(X.reshape(1,-1), centroid).squeeze()
+    key = key_child[np.argmin(dist)]
+    if 'Regressor' in data[key]:
+        return key   
     return Ada_KMeans_Iter_test(X, key, data, sep_num)
 
 def Ada_KMeans_test(X, data, sep_num):
     pred = []
     for i in range(X.shape[0]):
-        pred.append(data[Ada_KMeans_Iter_test(X[i], '', data, sep_num)]['Regressor'].predict(X[i].reshape(1,-1)))
+        pred.append(data[Ada_KMeans_Iter_test(X[i], '', data, sep_num)]['Regressor'].predict_proba(X[i].reshape(1,-1)))
     return np.array(pred)
 
 def Ada_KMeans(X, Y, path='tmp.pkl', train=True, sep_num=2, trial=6, batch_size=10000, minS=300, maxN=50, limit=0.5, maxiter=50):
