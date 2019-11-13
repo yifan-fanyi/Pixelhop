@@ -194,7 +194,7 @@ def Ada_KMeans_Iter_test(X, key, data, sep_num):
         d = euclidean_distances(X.reshape(1,-1), d['Centroid'].reshape(1,-1))
         if minD > d:
             minD = d
-            key = d['ID']
+            key = data['ID']
     return Ada_KMeans_Iter_test(X, key, data, sep_num)
 
 def Ada_KMeans_test(X, data, sep_num):
