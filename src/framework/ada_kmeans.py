@@ -13,13 +13,14 @@ from sklearn.metrics import log_loss as LL
 from collections import Counter
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics.pairwise import euclidean_distances
+import matplotlib.pyplot as plt
 
 import warnings
 warnings.filterwarnings('ignore')
 
 # method of leaf node regression
 def Regression_Method(X, Y, num_class):
-    return LogisticRegression(random_state=0, solver='lbfgs', multi_class='multinomial',class_weight='balanced', n_jobs=20).fit(X, Y.reshape(-1,))
+    return LogisticRegression(random_state=0, solver='newton-cg', multi_class='ovr',class_weight='balanced', n_jobs=20).fit(X, Y.reshape(-1,))
 
 # check entropy of meet the limits
 def Continue_split(H, limit):
@@ -36,6 +37,21 @@ def Compute_Weight(Y):
         weight[i] = 1-(float)(Y[Y==i].shape[0])/(float)(Y.shape[0])
     return weight
 
+def Compute_GlobalH(X, total, Hidx):
+    gH = 0.0
+    for i in range(len(Hidx)-1):
+        gH += (X[Hidx[i]]['Data'].shape[0]/float(total))*X[Hidx[i]]['H']
+    return gH
+
+def Draw_globalH(globalH):
+    print("drawing meanCE...")
+    plt.figure(0)
+    plt.plot(globalH,'bo-')
+    plt.xlabel('Iteration')
+    plt.ylabel('Conditional Cross Entropy')
+    plt.xticks(range(len(globalH)))
+    plt.savefig('./meanCE_hop'+str(time.time())+'.png')
+    plt.close(0)
 ###################################################################################
 
 # latest cross entropy method
@@ -43,6 +59,8 @@ def Comupte_Cross_Entropy(X, Y, num_class, num_bin=32):
     samp_num = Y.size
     if np.unique(Y).shape[0] == 1: #alread pure
         return 0
+    if X.shape[0] < num_bin:
+        return -1
     kmeans = KMeans(n_clusters=num_bin, random_state=0).fit(X)
     prob = np.zeros((num_bin, num_class))
     for i in range(num_bin):
@@ -145,6 +163,9 @@ def Ada_KMeans_train(X, Y, sep_num=2, trial=6, batch_size=10000, minS=300, maxN=
     # Hidx: <list> location of corresponding H in data
     num_class = np.unique(Y).shape[0]
     data, H, Hidx = Init_By_Class(X, Y, num_class)
+    rootSampNum = Y.shape[0]
+    global_H = []
+
     X, Y = [], []
     N ,myiter = 1, 1
     print("\n       <Info>        Start iteration")
@@ -172,12 +193,13 @@ def Ada_KMeans_train(X, Y, sep_num=2, trial=6, batch_size=10000, minS=300, maxN=
                 Hidx.append(Hidx[-1]+1)
                 N += 1
             myiter += 1
+            global_H.append(Compute_GlobalH(data,rootSampNum,Hidx))
         else:
             print("       <Warning>        Iter %s: Don't split! continue for the next largest"%str(myiter))
             H[idx] = -H[idx]
     data = Leaf_Node_Regression(data, Hidx, num_class)
     print("------------------- End: Ada_KMeans_train -> using %10f seconds"%(time.time()-t0))
-    return data           
+    return data, global_H        
 
 # list to dictionary
 def List2Dict(data):
@@ -211,11 +233,12 @@ def Ada_KMeans(X, Y=None, path='tmp.pkl', train=True, sep_num=2, trial=6, batch_
     print("       <Info>        train: %s"%str(train))
     t0 = time.time()
     if train == True:
-        data = Ada_KMeans_train(X, Y, sep_num=sep_num, trial=trial, batch_size=batch_size, minS=minS, maxN=maxN, limit=limit, maxiter=maxiter)
+        data, globalH = Ada_KMeans_train(X, Y, sep_num=sep_num, trial=trial, batch_size=batch_size, minS=minS, maxN=maxN, limit=limit, maxiter=maxiter)
         data = List2Dict(data)
         f = open('../weight/'+path, 'wb')
         pickle.dump(data, f)
         f.close()
+        Draw_globalH(globalH)
     else:
         f = open('../weight/'+path, 'rb')
         data = pickle.load(f)
