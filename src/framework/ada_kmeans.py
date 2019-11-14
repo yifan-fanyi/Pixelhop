@@ -39,8 +39,14 @@ def Compute_Weight(Y):
 
 def Compute_GlobalH(X, total, Hidx):
     gH = 0.0
+    H = []
+    w = []
     for i in range(len(Hidx)-1):
+        w.append((X[Hidx[i]]['Data'].shape[0]/float(total)))
+        H.append(X[Hidx[i]]['H'])
         gH += (X[Hidx[i]]['Data'].shape[0]/float(total))*X[Hidx[i]]['H']
+    print("       <Debug Info>        Emtropy: %s"%str(H))
+    print("       <Debug Info>        Weight: %s"%str(w))
     return gH
 
 def Draw_globalH(globalH):
@@ -169,6 +175,8 @@ def Ada_KMeans_train(X, Y, sep_num=2, trial=6, batch_size=10000, minS=300, maxN=
     X, Y = [], []
     N ,myiter = 1, 1
     print("\n       <Info>        Start iteration")
+    print("       <Info>        Iter %s"%(str(0)))
+    global_H.append(Compute_GlobalH(data, rootSampNum, Hidx))
     while N < maxN and myiter < maxiter+1:
         print("       <Info>        Iter %s"%(str(myiter)))
         idx = np.argmax(np.array(H))
@@ -193,7 +201,7 @@ def Ada_KMeans_train(X, Y, sep_num=2, trial=6, batch_size=10000, minS=300, maxN=
                 Hidx.append(Hidx[-1]+1)
                 N += 1
             myiter += 1
-            global_H.append(Compute_GlobalH(data,rootSampNum,Hidx))
+            global_H.append(Compute_GlobalH(data, rootSampNum, Hidx))
         else:
             print("       <Warning>        Iter %s: Don't split! continue for the next largest"%str(myiter))
             H[idx] = -H[idx]
