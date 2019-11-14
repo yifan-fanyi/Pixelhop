@@ -29,14 +29,6 @@ def Continue_split(H, limit):
     else:
         return True
 
-# only for binary cases
-# used when computing entropy in <Multi_Trial>
-def Compute_Weight(Y):
-    weight = np.zeros((2))
-    for i in range(0,weight.shape[0]):
-        weight[i] = 1-(float)(Y[Y==i].shape[0])/(float)(Y.shape[0])
-    return weight
-
 def Compute_GlobalH(X, total, Hidx):
     gH = 0.0
     H = []
@@ -58,7 +50,18 @@ def Draw_globalH(globalH):
     plt.xticks(range(len(globalH)))
     plt.savefig('./meanCE_hop'+str(time.time())+'.png')
     plt.close(0)
+    
 ###################################################################################
+# used when computing entropy in <Multi_Trial>
+def Compute_Weight(Y):
+    weight = np.zeros(np.unique(Y).shape[0])
+    for i in range(0,weight.shape[0]):
+        if (Y[Y==i].shape[0]) == 0:
+            weight[i] = 0
+        else:
+            weight[i] = 1./ (float)(Y[Y==i].shape[0])
+    weight /= np.sum(weight)
+    return weight
 
 # latest cross entropy method
 def Comupte_Cross_Entropy(X, Y, num_class, num_bin=32):
@@ -260,7 +263,7 @@ if __name__ == "__main__":
     X = cv2.imread('../../data/test.jpg')
     X = cv2.resize(X, (40,40))
     X = X.reshape(-1,3)
-    Y = np.random.randint(2, size=X.shape[0])
+    Y = np.random.randint(3, size=X.shape[0])
     '''
     print(" \n> This is a test enample: ")
     X = np.array([[-1, -1, 1], [-1, -2, 1], [-2, -1, 1], [-2, -2, 1], [1, 1, 5], [2, 3, 4]])
