@@ -1,4 +1,4 @@
-# v2019.11.12.v2
+# v2019.11.15.v1
 import os
 import sys
 import numpy as np
@@ -15,12 +15,16 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics.pairwise import euclidean_distances
 import matplotlib.pyplot as plt
 
+from framework.regression import myRegression
 import warnings
 warnings.filterwarnings('ignore')
 
 # method of leaf node regression
 def Regression_Method(X, Y, num_class):
-    return LogisticRegression(random_state=0, solver='newton-cg', multi_class='ovr',class_weight='balanced', n_jobs=20).fit(X, Y.reshape(-1,))
+    reg = myRegression(LogisticRegression(random_state=0, solver='liblinear', multi_class='ovr', n_jobs=20),
+                        num_class)
+    reg.fit(X, Y)
+    return reg
 
 # check entropy of meet the limits
 def Continue_split(H, limit):
