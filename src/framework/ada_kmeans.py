@@ -1,4 +1,4 @@
-# v2019.11.15.v1
+# v2019.11.16.v1
 import os
 import sys
 import numpy as np
@@ -26,12 +26,14 @@ def Regression_Method(X, Y, num_class):
     reg.fit(X, Y)
     return reg
 
-# check entropy of meet the limits
-def Continue_split(H, limit):
-    if np.std(H) > limit:
-        return False
-    else:
-        return True
+def Majority_Vote(Y, mvth):
+    new_label = -1
+    label = np.unique(Y)
+    for i in range(label.shape[0]):
+        if Y[Y == label[i]].shape[0] > mvth * (float)(Y.shape[0]):
+            new_label = label[i]
+            break
+    return new_label
 
 def Compute_GlobalH(X, total, Hidx):
     gH = 0.0
@@ -115,25 +117,24 @@ def Init_As_Whole(X, Y, num_class):
             'H':Comupte_Cross_Entropy(X, Y, num_class),
             'ID':'0'}]
     H = [data[0]['H']]
-    Hidx = [0,1]
+    Hidx = [0, 1]
     return data, H, Hidx
 
 # try multiply times when spliting the leaf node
-def Multi_Trial(X, sep_num=2, batch_size=None, trial=6, num_class=2):
+def Multi_Trial(X, sep_num, batch_size, trial, num_class, err):
     init = ['k-means++','random','k-means++','random','k-means++','random']
-    H = X['H']
+    H = X['H'] - err
     center = []
-    flag = 0
-    t_entropy = np.zeros((trial))
+    t_entropy = np.zeros((trial+1))
+    t_entropy[-1] = H + err
     for i in range(trial):
         if batch_size == None:
             kmeans = KMeans(n_clusters=sep_num, n_jobs=10, init=init[i%6]).fit(X['Data'])
         else:
             kmeans = MiniBatchKMeans(n_clusters=sep_num, batch_size=batch_size).fit(X['Data'])
-        # early stop
         k_labels = kmeans.labels_
         counting = np.array(Counter(k_labels.tolist()).most_common(np.unique(k_labels).size))[:,1]
-        if np.min(counting)>int(0.05*X['Data'].shape[0]):
+        if np.min(counting) > int(0.05*X['Data'].shape[0]):
             weight = Compute_Weight(kmeans.labels_)
             for k in range(sep_num):
                 t_entropy[i] += weight[k]*Comupte_Cross_Entropy(X['Data'][kmeans.labels_ == k], X['Label'][kmeans.labels_ == k], num_class)
@@ -141,15 +142,15 @@ def Multi_Trial(X, sep_num=2, batch_size=None, trial=6, num_class=2):
                 H = t_entropy[i]
                 center = kmeans.cluster_centers_.copy()
                 label = kmeans.labels_.copy()
-                flag = 1
                 print("           <Info>        Multi_Trial %s: Found a separation better than original! CE: %s"%(str(i),str(H)))
-    if flag == 0:
-        return [], t_entropy
+    print("           <Debug Info>        Gloabal entropy of each trail %s: "%(str(t_entropy)))
+    if len(center) == 0:
+        return []
     subX = []
     for i in range(sep_num):
         idx = (label == i)
         subX.append({'Data':X['Data'][idx], 'Label':X['Label'][idx], 'Centroid':center[i], 'H':Comupte_Cross_Entropy(X['Data'][idx],X['Label'][idx], num_class),'ID':X['ID']+str(i)})
-    return subX, t_entropy
+    return subX
 
 def Leaf_Node_Regression(data, Hidx, num_class):
     for i in range(len(Hidx)-1):
@@ -158,19 +159,14 @@ def Leaf_Node_Regression(data, Hidx, num_class):
         data[Hidx[i]]['Label'] = []
     return data
 
-def Ada_KMeans_train(X, Y, sep_num=2, trial=6, batch_size=10000, minS=300, maxN=50, limit=0.001, maxiter=50):
-    # trial: # of runs in each separation
-    # minS: minimum number of samples in each cluster
-    # maxN: max number of leaf nodes (centroids)
-    # limit: stop splitting this node when the std entropy of each trial<limit
-    # max iteration
+def Ada_KMeans_train(X, Y, sep_num, trial, batch_size, minS, maxN, err, mvth, maxiter):
     print("------------------- Start: Ada_KMeans_train")
     t0 = time.time()
     print("       <Info>        Trial: %s"%str(trial))
     print("       <Info>        Batch size: %s"%str(batch_size))
     print("       <Info>        Minimum number of samples in each cluster: %s"%str(minS))
     print("       <Info>        Max number of leaf nodes: %s"%str(batch_size))
-    print("       <Info>        Stop splitting when the max CE<limit: %s"%str(limit))
+    print("       <Info>        Stop splitting: %s"%str(err))
     print("       <Info>        Max iteration: %s"%str(maxiter))
     # H: <list> entropy of nodes can be split
     # Hidx: <list> location of corresponding H in data
@@ -187,19 +183,25 @@ def Ada_KMeans_train(X, Y, sep_num=2, trial=6, batch_size=10000, minS=300, maxN=
     while N < maxN and myiter < maxiter+1:
         print("       <Info>        Iter %s"%(str(myiter)))
         idx = np.argmax(np.array(H))
+        # finish splitting, when no node need further split 
         if H[idx] <= 0:
             print("       <Info>        Finish splitting!")
             break
-        if data[Hidx[idx]]['Data'].shape[0] < minS: # if this cluster has too few sample, change the next largest
+        # if this cluster has too few sample, do not split this node
+        if data[Hidx[idx]]['Data'].shape[0] < minS: 
             print("       <Warning>        Iter %s: Too small! continue for the next largest"%str(myiter))
             H[idx] = -H[idx]
             continue
-        subX, t_entropy = Multi_Trial(data[Hidx[idx]], sep_num=sep_num, batch_size=batch_size, trial=trial, num_class=num_class)
-        if Continue_split(t_entropy, limit) == False: # continue to split?
-            print("       <Debug Info>        std entropy of each trial: %s"%str(np.std(t_entropy)))
-            print("       <Debug Info>        entropy of each trial: %s"%str(t_entropy))
-            print("       <Warning>        Entropy would not decrease much on this node further, do not split it!")
-            continue
+        # majority vote
+        tmp = Majority_Vote(data[Hidx[idx]]['Label'], mvth)
+        if tmp != -1:
+            print("       <Warning>        Majority vote on this node, no further split needed")
+            H[idx] = -H[idx]
+            data[Hidx[idx]]['Label'] = tmp
+            continue 
+        # try to split this node multi times
+        subX = Multi_Trial(data[Hidx[idx]], sep_num=sep_num, batch_size=batch_size, trial=trial, num_class=num_class, err=err)
+        # find a better splitting?
         if len(subX) != 0:
             # save memory, do not save X, Y multi times
             data[Hidx[idx]]['Data'] = []
@@ -228,7 +230,7 @@ def List2Dict(data):
         res[data[i]['ID']] = data[i]
     return res
 
-def Ada_KMeans_Iter_test(X, key_parent, data, sep_num=2):
+def Ada_KMeans_Iter_test(X, key_parent, data, sep_num):
     centroid = []
     key_child = []
     for i in range(sep_num):
@@ -247,13 +249,13 @@ def Ada_KMeans_test(X, data, sep_num):
         pred.append(data[Ada_KMeans_Iter_test(X[i], '', data, sep_num)]['Regressor'].predict_proba(X[i].reshape(1,-1)))
     return np.array(pred)
 
-def Ada_KMeans(X, Y=None, path='tmp.pkl', train=True, sep_num=2, trial=6, batch_size=10000, minS=300, maxN=50, limit=0.5, maxiter=50):
+def Ada_KMeans(X, Y=None, path='tmp.pkl', train=True, sep_num=2, trial=6, batch_size=10000, minS=300, maxN=50, err=0.005, mvth=0.99, maxiter=50):
     print("=========== Start: Ada_KMeans")
     print("       <Info>        Input shape: %s"%str(X.shape))
     print("       <Info>        train: %s"%str(train))
     t0 = time.time()
     if train == True:
-        data, globalH = Ada_KMeans_train(X, Y, sep_num=sep_num, trial=trial, batch_size=batch_size, minS=minS, maxN=maxN, limit=limit, maxiter=maxiter)
+        data, globalH = Ada_KMeans_train(X, Y, sep_num=sep_num, trial=trial, batch_size=batch_size, minS=minS, maxN=maxN, err=err, mvth=mvth, maxiter=maxiter)
         data = List2Dict(data)
         f = open('../weight/'+path, 'wb')
         pickle.dump(data, f)
@@ -281,6 +283,6 @@ if __name__ == "__main__":
     Y = Y.reshape(-1,1)
     #print(" \n--> Input X... \n", X)
     #print(" \n--> Input Y... \n", Y)
-    data = Ada_KMeans(X, Y, limit=1, maxN=10)
+    data = Ada_KMeans(X, Y, err=1, maxN=10)
     print(" \n--> Result centroids... \n", data)
     

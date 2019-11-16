@@ -32,10 +32,11 @@ Ada_KMeans(X, Y=None, path='tmp.pkl', train=True, sep_num=2, trial=6, batch_size
 *`batch_size`* None is not use batch process, not optimized if using batch, more time, but save memory (default: `10000`) 
 *`minS`* -> minimum samples in one cluster (default: `300`)  
 *`maxN`* -> maximum number of clusters (default: `50`)  
-*`limit`* -> when to stop a cluster, can be self-defined by modifying the `Continue_split` function (default: `0.5`, entropy less than 0.5)  
+*`err`* -> find new leaf node splition must meet: `new_CE < parent_node_CE - err` (default: `0.005`)  
+*`mvth`* -> majority voting threshold (0-1, float). Larger than this vaule or other label would be ingnored (Default: `0.99`)  
 *`maxiter`* -> number of maximum iteration (default: `50`)
 
-Regression method can be modified in `Regression_Method` function, currently using `LogisticRegression`
+Regression method can be modified in `Regression_Method` function, currently using `LogisticRegression`, pass a pre-dinfined regressor (must have and enable `predict_proba`) to class named `myRegression` in `regression.py`, it would perform regression on labels existing in given training data and force non-existing labels with probability 0.  
 # Old code, do not maintain or used
 ## LAG Unit -> `LAG.py`
 
