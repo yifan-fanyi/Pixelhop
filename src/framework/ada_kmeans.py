@@ -28,7 +28,7 @@ def Regression_Method(X, Y, num_class):
 
 # check entropy of meet the limits
 def Continue_split(H, limit):
-    if H<limit:
+    if np.std(H) > limit:
         return False
     else:
         return True
@@ -124,6 +124,7 @@ def Multi_Trial(X, sep_num=2, batch_size=None, trial=6, num_class=2):
     H = X['H']
     center = []
     flag = 0
+    t_entropy = np.zeros((trial))
     for i in range(trial):
         if batch_size == None:
             kmeans = KMeans(n_clusters=sep_num, n_jobs=10, init=init[i%6]).fit(X['Data'])
@@ -134,22 +135,21 @@ def Multi_Trial(X, sep_num=2, batch_size=None, trial=6, num_class=2):
         counting = np.array(Counter(k_labels.tolist()).most_common(np.unique(k_labels).size))[:,1]
         if np.min(counting)>int(0.05*X['Data'].shape[0]):
             weight = Compute_Weight(kmeans.labels_)
-            tH = 0.0
             for k in range(sep_num):
-                tH += weight[k]*Comupte_Cross_Entropy(X['Data'][kmeans.labels_ == k], X['Label'][kmeans.labels_ == k], num_class)
-            if tH < H:
-                H = tH
+                t_entropy[i] += weight[k]*Comupte_Cross_Entropy(X['Data'][kmeans.labels_ == k], X['Label'][kmeans.labels_ == k], num_class)
+            if t_entropy[i] < H:
+                H = t_entropy[i]
                 center = kmeans.cluster_centers_.copy()
                 label = kmeans.labels_.copy()
                 flag = 1
                 print("           <Info>        Multi_Trial %s: Found a separation better than original! CE: %s"%(str(i),str(H)))
     if flag == 0:
-        return []
+        return [], t_entropy
     subX = []
     for i in range(sep_num):
         idx = (label == i)
         subX.append({'Data':X['Data'][idx], 'Label':X['Label'][idx], 'Centroid':center[i], 'H':Comupte_Cross_Entropy(X['Data'][idx],X['Label'][idx], num_class),'ID':X['ID']+str(i)})
-    return subX 
+    return subX, t_entropy
 
 def Leaf_Node_Regression(data, Hidx, num_class):
     for i in range(len(Hidx)-1):
@@ -158,11 +158,11 @@ def Leaf_Node_Regression(data, Hidx, num_class):
         data[Hidx[i]]['Label'] = []
     return data
 
-def Ada_KMeans_train(X, Y, sep_num=2, trial=6, batch_size=10000, minS=300, maxN=50, limit=0.5, maxiter=50):
+def Ada_KMeans_train(X, Y, sep_num=2, trial=6, batch_size=10000, minS=300, maxN=50, limit=0.001, maxiter=50):
     # trial: # of runs in each separation
     # minS: minimum number of samples in each cluster
     # maxN: max number of leaf nodes (centroids)
-    # limit: stop splitting when the max CE<limit
+    # limit: stop splitting this node when the std entropy of each trial<limit
     # max iteration
     print("------------------- Start: Ada_KMeans_train")
     t0 = time.time()
@@ -187,15 +187,20 @@ def Ada_KMeans_train(X, Y, sep_num=2, trial=6, batch_size=10000, minS=300, maxN=
     while N < maxN and myiter < maxiter+1:
         print("       <Info>        Iter %s"%(str(myiter)))
         idx = np.argmax(np.array(H))
-        if Continue_split(H[idx], limit) == False: # continue to split?
+        if H[idx] <= 0:
             print("       <Info>        Finish splitting!")
             break
         if data[Hidx[idx]]['Data'].shape[0] < minS: # if this cluster has too few sample, change the next largest
             print("       <Warning>        Iter %s: Too small! continue for the next largest"%str(myiter))
             H[idx] = -H[idx]
             continue
-        subX = Multi_Trial(data[Hidx[idx]], sep_num=sep_num, batch_size=batch_size, trial=trial, num_class=num_class)
-        if len(subX)!=0:
+        subX, t_entropy = Multi_Trial(data[Hidx[idx]], sep_num=sep_num, batch_size=batch_size, trial=trial, num_class=num_class)
+        if Continue_split(t_entropy, limit) == False: # continue to split?
+            print("       <Debug Info>        std entropy of each trial: %s"%str(np.std(t_entropy)))
+            print("       <Debug Info>        entropy of each trial: %s"%str(t_entropy))
+            print("       <Warning>        Entropy would not decrease much on this node further, do not split it!")
+            continue
+        if len(subX) != 0:
             # save memory, do not save X, Y multi times
             data[Hidx[idx]]['Data'] = []
             data[Hidx[idx]]['Label'] = []
