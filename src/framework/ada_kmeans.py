@@ -1,4 +1,4 @@
-# v2019.11.16.v1
+# v2019.11.17.v1
 import os
 import sys
 import numpy as np
@@ -244,10 +244,12 @@ def Ada_KMeans_Iter_test(X, key_parent, data, sep_num):
     return Ada_KMeans_Iter_test(X, key, data, sep_num)
 
 def Ada_KMeans_test(X, data, sep_num):
-    pred = []
     for i in range(X.shape[0]):
-        pred.append(data[Ada_KMeans_Iter_test(X[i], '', data, sep_num)]['Regressor'].predict_proba(X[i].reshape(1,-1)))
-    return np.array(pred)
+        if i == 0:
+            pred = data[Ada_KMeans_Iter_test(X[i], '', data, sep_num)]['Regressor'].predict_proba(X[i].reshape(1,-1))
+        else:
+            pred = np.concatenate((pred, data[Ada_KMeans_Iter_test(X[i], '', data, sep_num)]['Regressor'].predict_proba(X[i].reshape(1,-1))), axis=0)
+    return pred
 
 def Ada_KMeans(X, Y=None, path='tmp.pkl', train=True, sep_num=2, trial=6, batch_size=10000, minS=300, maxN=50, err=0.005, mvth=0.99, maxiter=50):
     print("=========== Start: Ada_KMeans")

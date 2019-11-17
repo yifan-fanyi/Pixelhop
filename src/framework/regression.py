@@ -1,4 +1,4 @@
-# 2019.11.16.v1
+# 2019.11.17.v1
 import numpy as np 
 import warnings
 warnings.filterwarnings('ignore')
@@ -32,7 +32,7 @@ class myRegression():
             if self.class_list[i] == 1:
                 pred[:, i] = tmp_pred[:, idx]
                 idx += 1
-        return pred.reshape(-1)
+        return pred.reshape(X.shape[0], self.num_class)
 
 if __name__ == "__main__":
     import cv2
