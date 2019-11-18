@@ -27,7 +27,6 @@ class Saab():
         if self.batch == None:
             feature = feature - feature_mean
         else:
-            print(feature_mean.shape, feature.shape)
             for i in range(0,feature.shape[0],self.batch):
                 if i+self.batch <= feature.shape[0]:
                     if axis == 0:

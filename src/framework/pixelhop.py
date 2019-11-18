@@ -1,4 +1,4 @@
-# v2019.11.13 sovled issue in batch
+# v2019.11.18 more efficient batch operation when getK==False
 # Alex
 # yifanwang0916@outlook.com
 # last update 2019.10.25
@@ -26,7 +26,7 @@ def PixelHop_Neighbour(feature, dilate, pad):
     #print("       <Info>        Input feature shape: %s"%str(feature.shape))
     #print("       <Info>        dilate: %s"%str(dilate))
     #print("       <Info>        padding: %s"%str(pad))
-    t0 = time.time()
+    #t0 = time.time()
     S = feature.shape
     idx = [-1, 0, 1]
     if pad == 'reflect':
@@ -65,8 +65,7 @@ def Batch_PixelHop_Neighbour(feature, dilate, pad, batch):
         res = PixelHop_Neighbour(feature[0:batch], dilate, pad)
     else:
         res = PixelHop_Neighbour(feature, dilate, pad)
-        return res
-    for i in range(batch,feature.shape[0],batch):
+    for i in range(batch, feature.shape[0], batch):
         if i+batch <= feature.shape[0]:
             res = np.concatenate((res, PixelHop_Neighbour(feature[i:i+batch], dilate, pad)), axis=0)
         else:
@@ -99,29 +98,48 @@ def Batch_Pixelhop_fit(weight_name, feature, useDC, batch):
         res = Pixelhop_fit('../weight/'+weight_name, feature[0:batch], useDC)
     else:
         res = Pixelhop_fit('../weight/'+weight_name, feature, useDC)
-        return res
-    for i in range(batch,feature.shape[0],batch):
+    for i in range(batch, feature.shape[0], batch):
         if i+batch <= feature.shape[0]:
             res = np.concatenate((res, Pixelhop_fit('../weight/'+weight_name, feature[i:i+batch], useDC)), axis=0)
         else:
-            res = np.concatenate((Pixelhop_fit('../weight/'+weight_name, feature[i:], useDC)), axis=0)
+            res = np.concatenate((res, Pixelhop_fit('../weight/'+weight_name, feature[i:], useDC)), axis=0)
     return res
 
 def PixelHop_Unit(feature, dilate=np.array([1]), num_AC_kernels=6, pad='reflect', weight_name='tmp.pkl', getK=False, useDC=False, batch=None):
     print("=========== Start: PixelHop_Unit")
     print("       <Info>        Batch size: %s"%str(batch))
     t0 = time.time()
-    if batch == None:
-        feature = PixelHop_Neighbour(feature, dilate, pad)
-    else:
-        feature = Batch_PixelHop_Neighbour(feature, dilate, pad, batch)
     if getK == True:
-        saab = Saab('../weight/'+weight_name, num_kernels=num_AC_kernels, useDC=useDC, batch=batch)
-        saab.fit(feature)
-    if batch == None:
-        feature = Pixelhop_fit('../weight/'+weight_name, feature, useDC) 
+        if batch == None:
+            feature = PixelHop_Neighbour(feature, dilate, pad)
+        else:
+            feature = Batch_PixelHop_Neighbour(feature, dilate, pad, batch)
+        if getK == True:
+            saab = Saab('../weight/'+weight_name, num_kernels=num_AC_kernels, useDC=useDC, batch=batch)
+            saab.fit(feature)
+        if batch == None:
+            feature = Pixelhop_fit('../weight/'+weight_name, feature, useDC) 
+        else:
+            feature = Batch_Pixelhop_fit('../weight/'+weight_name, feature, useDC, batch)
     else:
-        feature = Batch_Pixelhop_fit('../weight/'+weight_name, feature, useDC, batch)
+        if batch == None:
+            feature = PixelHop_Neighbour(feature, dilate, pad)
+            feature = Pixelhop_fit('../weight/'+weight_name, feature, useDC)
+        else:
+            if batch <= feature.shape[0]:
+                tmp = PixelHop_Neighbour(feature[0:batch], dilate, pad)
+                feature_res = Pixelhop_fit('../weight/'+weight_name, tmp, useDC)
+            else:
+                tmp = PixelHop_Neighbour(feature, dilate, pad)
+                feature_res = Pixelhop_fit('../weight/'+weight_name, tmp, useDC)
+            for i in range(batch, feature.shape[0], batch):
+                if i+batch <= feature.shape[0]:
+                    tmp = PixelHop_Neighbour(feature[i:i+batch], dilate, pad)
+                    feature_res = np.concatenate((feature_res, Pixelhop_fit('../weight/'+weight_name, tmp, useDC)), axis=0)
+                else:
+                    tmp = PixelHop_Neighbour(feature[i:], dilate, pad)
+                    feature_res = np.concatenate((feature_res, Pixelhop_fit('../weight/'+weight_name, tmp, useDC)), axis=0)
+            feature = feature_res
     print("       <Info>        Output feature shape: %s"%str(feature.shape))
     print("=========== End: PixelHop_Unit -> using %10f seconds"%(time.time()-t0))
     return feature
