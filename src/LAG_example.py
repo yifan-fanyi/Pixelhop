@@ -20,7 +20,7 @@ if __name__ == "__main__":
     test_images = train_images[:500]
     test_labels = train_labels[:500]
     
-    train_feature = PixelHop_Unit(train_images, dilate=np.array([1]), pad='reflect', num_AC_kernels=5, weight_name='pixelhop1_mnist.pkl', getK=1, batch=9)
+    train_feature = PixelHop_Unit(train_images, dilate=np.array([1]), pad='reflect', num_AC_kernels=5, weight_name='pixelhop1_mnist.pkl', getK=1, batch=None)
     train_feature = block_reduce(train_feature, (1, 4, 4, 1), np.mean).reshape(1000,-1)
     train_feature_reduce = LAG_Unit(train_feature, train_labels, class_list=class_list, num_clusters=[5,5,5,5,5,5,5,5,5,5], alpha=5, train=True)
     

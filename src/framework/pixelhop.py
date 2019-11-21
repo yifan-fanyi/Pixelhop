@@ -1,8 +1,4 @@
-# v2019.11.18 more efficient batch operation when getK==False
-# Alex
-# yifanwang0916@outlook.com
-# last update 2019.10.25
-
+# v2019.11.21 faster PixelHop_Neighbour
 # PixelHop unit
 
 # feature: <4-D array>, (N, H, W, D)
@@ -27,35 +23,25 @@ def PixelHop_Neighbour(feature, dilate, pad):
     #print("       <Info>        dilate: %s"%str(dilate))
     #print("       <Info>        padding: %s"%str(pad))
     #t0 = time.time()
-    S = feature.shape
-    idx = [-1, 0, 1]
+    dilate = np.array(dilate)
+    idx = [1, 0, -1]
+    H, W = feature.shape[1], feature.shape[2]
+    res = feature.copy()
     if pad == 'reflect':
         feature = np.pad(feature, ((0,0),(dilate[-1], dilate[-1]),(dilate[-1], dilate[-1]),(0,0)), 'reflect')
     elif pad == 'zeros':
         feature = np.pad(feature, ((0,0),(dilate[-1], dilate[-1]),(dilate[-1], dilate[-1]),(0,0)), 'constant', constant_values=0)
-    if pad == "none":
-        dilate = np.array(dilate).astype('int64')
-        res = np.zeros((S[1]-2*dilate[-1], S[2]-2*dilate[-1], S[0], (8*dilate.shape[0]+1)*S[3]))
     else:
-        dilate = np.array(dilate).astype('int64')
-        res = np.zeros((S[1], S[2], S[0], (8*dilate.shape[0]+1)*S[3]))
-    feature = np.moveaxis(feature, 0, 2)
-    for i in range(dilate[-1], feature.shape[0]-dilate[-1]):
-        for j in range(dilate[-1], feature.shape[1]-dilate[-1]):
-            tmp = []
-            for d in dilate:
-                for ii in idx:
-                    for jj in idx:
-                        if ii == 0 and jj == 0:
-                            continue
-                        iii = i+ii*d
-                        jjj = j+jj*d
-                        tmp.append(feature[iii, jjj])
-            tmp.append(feature[i,j])
-            tmp = np.array(tmp)
-            tmp = np.moveaxis(tmp,0,1)
-            res[i-dilate[-1], j-dilate[-1]] = tmp.reshape(S[0],-1)
-    res = np.moveaxis(res, 2, 0)
+        H, W = H - 2*dilate[-1], W - 2*dilate[-1]
+        res = feature[:, dilate[-1]:dilate[-1]+H, dilate[-1]:dilate[-1]+W].copy()
+    for d in range(dilate.shape[0]):
+        for i in idx:
+            for j in idx:
+                if i == 0 and j == 0:
+                    continue
+                else:
+                    ii, jj = (i+1)*dilate[d], (j+1)*dilate[d]
+                    res = np.concatenate((feature[:, ii:ii+H, jj:jj+W], res), axis=3)
     #print("       <Info>        Output feature shape: %s"%str(res.shape))
     #print("------------------- End: PixelHop_Neighbour -> using %10f seconds"%(time.time()-t0))
     return res 

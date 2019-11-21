@@ -1,7 +1,4 @@
-# v2019.11.13 resolve issue when using bais
-# Alex
-# yifanwang0916@outlook.com
-# 2019.09.25
+# v2019.11.21 
 
 # Saab transformation for PixelHop unit
 # modeiled from https://github.com/davidsonic/Interpretable_CNN
@@ -22,11 +19,14 @@ class Saab():
         self.energy_percent = energy_percent
         self.needBias = False
 
+    # axis=0 batch operation would have something wrong
+    # I need to go to bed, leave it for furture
     def remove_mean(self, feature, axis):
         feature_mean = np.mean(feature, axis=axis, keepdims=True)
-        if self.batch == None:
+        if self.batch == None or axis == 0:
             feature = feature - feature_mean
         else:
+            self.batch *= 1000
             for i in range(0,feature.shape[0],self.batch):
                 if i+self.batch <= feature.shape[0]:
                     if axis == 0:
@@ -82,19 +82,14 @@ class Saab():
         print("       <Info>        pixelhop_feature.shape: %s"%str(pixelhop_feature.shape))
         pixelhop_feature = pixelhop_feature.reshape(S[0]*S[1]*S[2],-1)
         pca_params = {}
-
         pixelhop_feature, feature_expectation = self.remove_mean(pixelhop_feature, axis=0)
         pixelhop_feature, dc = self.remove_mean(pixelhop_feature, axis=1)
-
-
         print('       <Info>        training_data.shape: {}'.format(pixelhop_feature.shape))
-
         kernels, mean = self.find_kernels_pca(pixelhop_feature)
         num_channels = pixelhop_feature.shape[1]     
         if self.useDC == True:       
             dc_kernel = 1 / np.sqrt(num_channels) * np.ones((1, num_channels))
             kernels = np.concatenate((dc_kernel, kernels), axis=0)
-
         if self.needBias == True:
             pixelhop_feature = self.Transform(pixelhop_feature, kernels)
             bias = LA.norm(pixelhop_feature, axis=1)
