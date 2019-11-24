@@ -1,6 +1,7 @@
-# 2019.11.17.v1
+# 2019.11.23.v1
 import numpy as np 
 import warnings
+from sklearn.metrics import accuracy_score
 warnings.filterwarnings('ignore')
 
 class myRegression():
@@ -33,6 +34,11 @@ class myRegression():
                 pred[:, i] = tmp_pred[:, idx]
                 idx += 1
         return pred.reshape(X.shape[0], self.num_class)
+    
+    def score(self, X, Y):
+        pred = self.predict_proba(X)
+        pred = np.argmax(pred, axis=1)
+        print("           <Debug Info>        accuracy on node: %s"%str(accuracy_score(pred, Y)))
 
 if __name__ == "__main__":
     import cv2

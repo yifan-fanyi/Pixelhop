@@ -1,4 +1,4 @@
-# v2019.11.17.v1
+# v2019.11.23.v1
 import os
 import sys
 import numpy as np
@@ -20,10 +20,13 @@ import warnings
 warnings.filterwarnings('ignore')
 
 # method of leaf node regression
+#from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
+#RandomForestClassifier(n_estimators=10, max_depth=7, verbose=1, n_jobs=20),
 def Regression_Method(X, Y, num_class):
-    reg = myRegression(LogisticRegression(random_state=0, solver='liblinear', multi_class='ovr', n_jobs=20),
+    reg = myRegression(LogisticRegression(solver='liblinear', multi_class='ovr', n_jobs=20),
                         num_class)
     reg.fit(X, Y)
+    reg.score(X, Y)
     return reg
 
 def Majority_Vote(Y, mvth):
@@ -35,6 +38,19 @@ def Majority_Vote(Y, mvth):
             break
     return new_label
 
+# select next leaf node to be splited
+# alpha: weight importance
+def Select_Next_Split(data, Hidx, alpha):
+    t = 0
+    idx = 0
+    for i in range(0,len(Hidx)-1):
+        tt = data[Hidx[i]]['H']*np.exp(-1*alpha/(float)(data[Hidx[i]]['Data'].shape[0]))
+        if t < tt:
+            t = tt
+            idx = i
+    return idx
+
+################################# Global Cross Entropy #################################
 def Compute_GlobalH(X, total, Hidx):
     gH = 0.0
     H = []
@@ -48,16 +64,16 @@ def Compute_GlobalH(X, total, Hidx):
     return gH
 
 def Draw_globalH(globalH):
-    print("drawing meanCE...")
+    print("\ndrawing meanCE...")
     plt.figure(0)
     plt.plot(globalH,'bo-')
     plt.xlabel('Iteration')
     plt.ylabel('Conditional Cross Entropy')
-    plt.xticks(range(len(globalH)))
+    plt.xticks(range(0, len(globalH), len(globalH)//10+1))
     plt.savefig('./meanCE_hop'+str(time.time())+'.png')
     plt.close(0)
-    
-###################################################################################
+
+################################# Cross Entropy #################################
 # used when computing entropy in <Multi_Trial>
 def Compute_Weight(Y):
     weight = np.zeros(np.unique(Y).shape[0])
@@ -89,6 +105,7 @@ def Comupte_Cross_Entropy(X, Y, num_class, num_bin=32):
     probab = prob[kmeans.labels_]
     return LL(true_indicator,probab)/math.log(num_class)
 
+################################# Init For Root Node #################################
 # init kmeans centroid with center of samples from each label, then do kmeans
 def Init_By_Class(X, Y, num_class):
     init_centroid = []
@@ -120,29 +137,43 @@ def Init_As_Whole(X, Y, num_class):
     Hidx = [0, 1]
     return data, H, Hidx
 
+################################# KMeans Init Methods #################################
+# LBG initialization
+def Init_LBG(X, sep_num):
+    c1 = np.mean(X, axis=0).reshape(1,-1)
+    st = np.std(X, axis=0)
+    dic = {}
+    for i in range(sep_num-1):
+        n = np.random.randint(2, size=X.shape[1])
+        n[n==0] = -1
+        if str(n) in dic:
+            continue  
+        dic[str(n)] = 1 
+        c2 = c1 + st
+        new_centroid = np.concatenate((c1, c2.reshape(1,-1)), axis=0)
+    return new_centroid
+
+################################# Ada_KMeans train #################################
 # try multiply times when spliting the leaf node
 def Multi_Trial(X, sep_num, batch_size, trial, num_class, err):
-    init = ['k-means++','random','k-means++','random','k-means++','random']
+    init = ['k-means++', 'random', 'k-means++', 'random', 'k-means++', 'random', Init_LBG(X['Data'], sep_num)]
     H = X['H'] - err
     center = []
     t_entropy = np.zeros((trial+1))
     t_entropy[-1] = H + err
     for i in range(trial):
         if batch_size == None:
-            kmeans = KMeans(n_clusters=sep_num, n_jobs=10, init=init[i%6]).fit(X['Data'])
+            kmeans = KMeans(n_clusters=sep_num, n_jobs=20, init=init[i%len(init)]).fit(X['Data'])
         else:
             kmeans = MiniBatchKMeans(n_clusters=sep_num, batch_size=batch_size).fit(X['Data'])
-        k_labels = kmeans.labels_
-        counting = np.array(Counter(k_labels.tolist()).most_common(np.unique(k_labels).size))[:,1]
-        if np.min(counting) > int(0.05*X['Data'].shape[0]):
-            weight = Compute_Weight(kmeans.labels_)
-            for k in range(sep_num):
-                t_entropy[i] += weight[k]*Comupte_Cross_Entropy(X['Data'][kmeans.labels_ == k], X['Label'][kmeans.labels_ == k], num_class)
-            if t_entropy[i] < H:
-                H = t_entropy[i]
-                center = kmeans.cluster_centers_.copy()
-                label = kmeans.labels_.copy()
-                print("           <Info>        Multi_Trial %s: Found a separation better than original! CE: %s"%(str(i),str(H)))
+        weight = Compute_Weight(kmeans.labels_)
+        for k in range(sep_num):
+            t_entropy[i] += weight[k]*Comupte_Cross_Entropy(X['Data'][kmeans.labels_ == k], X['Label'][kmeans.labels_ == k], num_class)
+        if t_entropy[i] < H:
+            H = t_entropy[i]
+            center = kmeans.cluster_centers_.copy()
+            label = kmeans.labels_.copy()
+            print("           <Info>        Multi_Trial %s: Found a separation better than original! CE: %s"%(str(i),str(H)))
     print("           <Debug Info>        Gloabal entropy of each trail %s: "%(str(t_entropy)))
     if len(center) == 0:
         return []
@@ -159,7 +190,7 @@ def Leaf_Node_Regression(data, Hidx, num_class):
         data[Hidx[i]]['Label'] = []
     return data
 
-def Ada_KMeans_train(X, Y, sep_num, trial, batch_size, minS, maxN, err, mvth, maxiter):
+def Ada_KMeans_train(X, Y, sep_num, trial, batch_size, minS, maxN, err, mvth, maxiter, alpha):
     print("------------------- Start: Ada_KMeans_train")
     t0 = time.time()
     print("       <Info>        Trial: %s"%str(trial))
@@ -168,6 +199,7 @@ def Ada_KMeans_train(X, Y, sep_num, trial, batch_size, minS, maxN, err, mvth, ma
     print("       <Info>        Max number of leaf nodes: %s"%str(batch_size))
     print("       <Info>        Stop splitting: %s"%str(err))
     print("       <Info>        Max iteration: %s"%str(maxiter))
+    print("       <Info>        Alpha: %s"%str(alpha))
     # H: <list> entropy of nodes can be split
     # Hidx: <list> location of corresponding H in data
     num_class = np.unique(Y).shape[0]
@@ -182,7 +214,7 @@ def Ada_KMeans_train(X, Y, sep_num, trial, batch_size, minS, maxN, err, mvth, ma
     global_H.append(Compute_GlobalH(data, rootSampNum, Hidx))
     while N < maxN and myiter < maxiter+1:
         print("       <Info>        Iter %s"%(str(myiter)))
-        idx = np.argmax(np.array(H))
+        idx = Select_Next_Split(data, Hidx, alpha)
         # finish splitting, when no node need further split 
         if H[idx] <= 0:
             print("       <Info>        Finish splitting!")
@@ -223,6 +255,7 @@ def Ada_KMeans_train(X, Y, sep_num, trial, batch_size, minS, maxN, err, mvth, ma
     print("------------------- End: Ada_KMeans_train -> using %10f seconds"%(time.time()-t0))
     return data, global_H        
 
+################################# Ada KMeans Test #################################
 # list to dictionary
 def List2Dict(data):
     res = {}
@@ -251,13 +284,14 @@ def Ada_KMeans_test(X, data, sep_num):
             pred = np.concatenate((pred, data[Ada_KMeans_Iter_test(X[i], '', data, sep_num)]['Regressor'].predict_proba(X[i].reshape(1,-1))), axis=0)
     return pred
 
-def Ada_KMeans(X, Y=None, path='tmp.pkl', train=True, sep_num=2, trial=6, batch_size=10000, minS=300, maxN=50, err=0.005, mvth=0.99, maxiter=50):
+################################# MAIN Function #################################
+def Ada_KMeans(X, Y=None, path='tmp.pkl', train=True, sep_num=2, trial=6, batch_size=10000, minS=300, maxN=50, err=0.005, mvth=0.99, maxiter=50, alpha=1):
     print("=========== Start: Ada_KMeans")
     print("       <Info>        Input shape: %s"%str(X.shape))
     print("       <Info>        train: %s"%str(train))
     t0 = time.time()
     if train == True:
-        data, globalH = Ada_KMeans_train(X, Y, sep_num=sep_num, trial=trial, batch_size=batch_size, minS=minS, maxN=maxN, err=err, mvth=mvth, maxiter=maxiter)
+        data, globalH = Ada_KMeans_train(X, Y, sep_num=sep_num, trial=trial, batch_size=batch_size, minS=minS, maxN=maxN, err=err, mvth=mvth, maxiter=maxiter, alpha=alpha)
         data = List2Dict(data)
         f = open('../weight/'+path, 'wb')
         pickle.dump(data, f)
@@ -271,17 +305,14 @@ def Ada_KMeans(X, Y=None, path='tmp.pkl', train=True, sep_num=2, trial=6, batch_
     print("=========== End: Ada_KMeans_train -> using %10f seconds"%(time.time()-t0))
     return X
 
+################################# Test #################################
 if __name__ == "__main__":
     import cv2
     X = cv2.imread('../../data/test.jpg')
     X = cv2.resize(X, (40,40))
     X = X.reshape(-1,3)
     Y = np.random.randint(3, size=X.shape[0])
-    '''
     print(" \n> This is a test enample: ")
-    X = np.array([[-1, -1, 1], [-1, -2, 1], [-2, -1, 1], [-2, -2, 1], [1, 1, 5], [2, 3, 4]])
-    Y = np.array([0, 0, 0, 1, 1, 1])
-    '''
     Y = Y.reshape(-1,1)
     #print(" \n--> Input X... \n", X)
     #print(" \n--> Input Y... \n", Y)

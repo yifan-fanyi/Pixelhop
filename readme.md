@@ -21,7 +21,7 @@ From [arXiv:1909.08190](https://arxiv.org/abs/1909.08190).
 
 ## Adaptive KMeans -> `ada_kmeans.py`
 ```
-Ada_KMeans(X, Y=None, path='tmp.pkl', train=True, sep_num=2, trial=6, batch_size=10000, minS=300, maxN=50, limit=0.5, maxiter=50):
+Ada_KMeans(X, Y=None, path='tmp.pkl', train=True, sep_num=2, trial=6, batch_size=10000, minS=300, maxN=50, err=0.005, mvth=0.99, maxiter=50, alpha=0.5):
 ```
 *`X`* -> input feature  
 *`Y`* -> corresponding labels of each training sample, testing process do not need it (default: `None`)  
@@ -34,9 +34,11 @@ Ada_KMeans(X, Y=None, path='tmp.pkl', train=True, sep_num=2, trial=6, batch_size
 *`maxN`* -> maximum number of clusters (default: `50`)  
 *`err`* -> find new leaf node splition must meet: `new_CE < parent_node_CE - err` (default: `0.005`)  
 *`mvth`* -> majority voting threshold (0-1, float). Larger than this vaule or other label would be ingnored (Default: `0.99`)  
-*`maxiter`* -> number of maximum iteration (default: `50`)
+*`maxiter`* -> number of maximum iteration (default: `50`)  
+*`alpha`* -> control the importance of number of samples when selecting which node to be split, the larger, the more importanct (default: `0.5`)  
 
-Regression method can be modified in `Regression_Method` function, currently using `LogisticRegression`, pass a pre-dinfined regressor (must have and enable `predict_proba`) to class named `myRegression` in `regression.py`, it would perform regression on labels existing in given training data and force non-existing labels with probability 0.  
+Regression method can be modified in `Regression_Method` function, currently using `LogisticRegression`, pass a pre-dinfined regressor (must have and enable `predict_proba` and `fit`) to class named `myRegression` in `regression.py`, it would perform regression on labels existing in given training data and force non-existing labels with probability 0.  
+
 # Old code, do not maintain or used
 ## LAG Unit -> `LAG.py`
 
