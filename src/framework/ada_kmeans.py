@@ -1,4 +1,4 @@
-# v2019.11.23.v1
+# v2019.11.24.v1
 import os
 import sys
 import numpy as np
@@ -143,14 +143,15 @@ def Init_LBG(X, sep_num):
     c1 = np.mean(X, axis=0).reshape(1,-1)
     st = np.std(X, axis=0)
     dic = {}
+    new_centroid = c1
     for i in range(sep_num-1):
         n = np.random.randint(2, size=X.shape[1])
         n[n==0] = -1
         if str(n) in dic:
             continue  
         dic[str(n)] = 1 
-        c2 = c1 + st
-        new_centroid = np.concatenate((c1, c2.reshape(1,-1)), axis=0)
+        c2 = c1 + n * st
+        new_centroid = np.concatenate((new_centroid, c2.reshape(1,-1)), axis=0)
     return new_centroid
 
 ################################# Ada_KMeans train #################################
@@ -267,8 +268,9 @@ def Ada_KMeans_Iter_test(X, key_parent, data, sep_num):
     centroid = []
     key_child = []
     for i in range(sep_num):
-        centroid.append(data[key_parent+str(i)]['Centroid'].reshape(-1))
-        key_child.append(key_parent+str(i))
+        if key_parent+str(i) in data:
+            centroid.append(data[key_parent+str(i)]['Centroid'].reshape(-1))
+            key_child.append(key_parent+str(i))
     centroid = np.array(centroid)
     dist = euclidean_distances(X.reshape(1,-1), centroid).squeeze()
     key = key_child[np.argmin(dist)]
