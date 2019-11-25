@@ -229,7 +229,7 @@ def Ada_KMeans_train(X, Y, sep_num, trial, batch_size, minS, maxN, err, mvth, ma
         if tmp != -1:
             print("       <Warning>        Majority vote on this node, no further split needed")
             H[idx] = -H[idx]
-            data[Hidx[idx]]['Label'] = tmp
+            data[Hidx[idx]]['Label'] = tmp * np.ones((data[Hidx[idx]]['Label'].shape[0]))
             continue 
         # try to split this node multi times
         subX = Multi_Trial(data[Hidx[idx]], sep_num=sep_num, batch_size=batch_size, trial=trial, num_class=num_class, err=err)
