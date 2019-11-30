@@ -44,7 +44,8 @@ def Select_Next_Split(data, Hidx, alpha):
     t = 0
     idx = 0
     for i in range(0,len(Hidx)-1):
-        tt = data[Hidx[i]]['H']*np.exp(-1*alpha/(float)(data[Hidx[i]]['Data'].shape[0]))
+        #tt = data[Hidx[i]]['H']*np.exp(-1*alpha/(float)(data[Hidx[i]]['Data'].shape[0]))
+        tt = data[Hidx[i]]['H']*np.log((float)(data[Hidx[i]]['Data'].shape[0]))/np.log(alpha+1)
         if t < tt:
             t = tt
             idx = i
@@ -191,7 +192,7 @@ def Leaf_Node_Regression(data, Hidx, num_class):
         data[Hidx[i]]['Label'] = []
     return data
 
-def Ada_KMeans_train(X, Y, sep_num, trial, batch_size, minS, maxN, err, mvth, maxiter, alpha):
+def Ada_KMeans_train(X, Y, sep_num, trial, batch_size, minS, maxN, err, mvth, maxdepth, alpha):
     print("------------------- Start: Ada_KMeans_train")
     t0 = time.time()
     print("       <Info>        Trial: %s"%str(trial))
@@ -213,7 +214,7 @@ def Ada_KMeans_train(X, Y, sep_num, trial, batch_size, minS, maxN, err, mvth, ma
     print("\n       <Info>        Start iteration")
     print("       <Info>        Iter %s"%(str(0)))
     global_H.append(Compute_GlobalH(data, rootSampNum, Hidx))
-    while N < maxN and myiter < maxiter+1:
+    while N < maxN:
         print("       <Info>        Iter %s"%(str(myiter)))
         idx = Select_Next_Split(data, Hidx, alpha)
         # finish splitting, when no node need further split 
@@ -223,6 +224,11 @@ def Ada_KMeans_train(X, Y, sep_num, trial, batch_size, minS, maxN, err, mvth, ma
         # if this cluster has too few sample, do not split this node
         if data[Hidx[idx]]['Data'].shape[0] < minS: 
             print("       <Warning>        Iter %s: Too small! continue for the next largest"%str(myiter))
+            H[idx] = -H[idx]
+            continue
+        # maxdepth
+        if len(data[Hidx[idx]]['ID']) >= maxdepth: 
+            print("       <Warning>        Depth >= maxdepth %s: Too small! continue for the next largest"%str(maxdepth))
             H[idx] = -H[idx]
             continue
         # majority vote
