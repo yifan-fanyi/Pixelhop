@@ -200,7 +200,7 @@ def Ada_KMeans_train(X, Y, sep_num, trial, batch_size, minS, maxN, err, mvth, ma
     print("       <Info>        Minimum number of samples in each cluster: %s"%str(minS))
     print("       <Info>        Max number of leaf nodes: %s"%str(batch_size))
     print("       <Info>        Stop splitting: %s"%str(err))
-    print("       <Info>        Max iteration: %s"%str(maxiter))
+    print("       <Info>        Max depth: %s"%str(maxdepth))
     print("       <Info>        Alpha: %s"%str(alpha))
     # H: <list> entropy of nodes can be split
     # Hidx: <list> location of corresponding H in data
