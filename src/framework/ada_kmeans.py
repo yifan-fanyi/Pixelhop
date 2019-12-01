@@ -310,13 +310,13 @@ def Ada_KMeans_test(X, data, sep_num):
     return pred
 
 ################################# MAIN Function #################################
-def Ada_KMeans(X, Y=None, path='tmp.pkl', train=True, sep_num=2, trial=6, batch_size=10000, minS=300, maxN=50, err=0.005, mvth=0.99, maxiter=50, alpha=1):
+def Ada_KMeans(X, Y=None, path='tmp.pkl', train=True, sep_num=2, trial=6, batch_size=10000, minS=300, maxN=50, err=0.005, mvth=0.99, maxdepth=50, alpha=1):
     print("=========== Start: Ada_KMeans")
     print("       <Info>        Input shape: %s"%str(X.shape))
     print("       <Info>        train: %s"%str(train))
     t0 = time.time()
     if train == True:
-        data, globalH = Ada_KMeans_train(X, Y, sep_num=sep_num, trial=trial, batch_size=batch_size, minS=minS, maxN=maxN, err=err, mvth=mvth, maxiter=maxiter, alpha=alpha)
+        data, globalH = Ada_KMeans_train(X, Y, sep_num=sep_num, trial=trial, batch_size=batch_size, minS=minS, maxN=maxN, err=err, mvth=mvth, maxdepth=maxdepth, alpha=alpha)
         data = List2Dict(data)
         f = open('../weight/'+path, 'wb')
         pickle.dump(data, f)
