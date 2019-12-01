@@ -1,4 +1,4 @@
-# v2019.11.24.v1
+# v2019.11.30.v1
 import os
 import sys
 import numpy as np
@@ -7,6 +7,7 @@ import pickle
 import scipy
 import sklearn
 import math
+import random
 from sklearn import preprocessing 
 from sklearn.cluster import MiniBatchKMeans, KMeans
 from sklearn.metrics import log_loss as LL
@@ -108,25 +109,41 @@ def Comupte_Cross_Entropy(X, Y, num_class, num_bin=32):
 
 ################################# Init For Root Node #################################
 # init kmeans centroid with center of samples from each label, then do kmeans
-def Init_By_Class(X, Y, num_class):
+def Init_By_Class(X, Y, num_class, sep_num, trial):
     init_centroid = []
     for i in range(np.unique(Y).shape[0]):
         Y = Y.reshape(-1)
         init_centroid.append(np.mean(X[Y==i],axis=0).reshape(-1))
-    kmeans = KMeans(n_clusters=np.unique(Y).shape[0], n_jobs=10, init=np.array(init_centroid)).fit(X)
+    tmpH = 10
+    init_centroid = np.array(init_centroid)
+    if sep_num == num_class:
+        trial = 1
+    for i in range(trial):
+        t = np.arange(0, np.unique(Y).shape[0]).tolist()
+        tmp_idx = np.array(random.sample(t, len(t)))
+        km = KMeans(n_clusters=sep_num, n_jobs=10, init=init_centroid[tmp_idx[0:sep_num]]).fit(X)
+        ce = Comupte_Cross_Entropy(X[km.labels_ == i], Y[km.labels_ == i], num_class)
+        if tmpH > ce:
+            kmeans = km
+            tmpH = ce
     data = []
+    data.append({'Data': [],
+                'Label': [],
+                'Centroid': np.mean(X, axis=1),
+                'H': Comupte_Cross_Entropy(X, Y, num_class),
+                'ID': str(-1)})
     H = []
-    Hidx = [0]
-    for i in range(np.unique(Y).shape[0]):
+    Hidx = [1]
+    for i in range(sep_num):
         data.append({'Data': X[kmeans.labels_ == i],
                     'Label': Y[kmeans.labels_ == i],
                     'Centroid': kmeans.cluster_centers_[i],
                     'H': Comupte_Cross_Entropy(X[kmeans.labels_ == i], Y[kmeans.labels_ == i], num_class),
                     'ID': str(i)})
         H.append(data[i]['H'])
-        Hidx.append(Hidx[-1]+1)
+        Hidx.append(Hidx[-1]+1) 
     return data, H, Hidx
-
+    
 # init whole data as one cluster
 def Init_As_Whole(X, Y, num_class):
     data = [{'Data':X, 
@@ -205,7 +222,7 @@ def Ada_KMeans_train(X, Y, sep_num, trial, batch_size, minS, maxN, err, mvth, ma
     # H: <list> entropy of nodes can be split
     # Hidx: <list> location of corresponding H in data
     num_class = np.unique(Y).shape[0]
-    data, H, Hidx = Init_By_Class(X, Y, num_class)
+    data, H, Hidx = Init_By_Class(X, Y, num_class, sep_num, trial)
     rootSampNum = Y.shape[0]
     global_H = []
 
