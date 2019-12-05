@@ -18,7 +18,7 @@ from sklearn.metrics.pairwise import euclidean_distances
 from sklearn.cluster import MiniBatchKMeans,KMeans
 from sklearn.metrics import silhouette_score
 import matplotlib.pyplot as plt
-from yellowbrick.cluster import SilhouetteVisualizer
+from yellowbrick.cluster import SilhouetteVisualizer, KElbowVisualizer
 
 import warnings
 warnings.filterwarnings('ignore')

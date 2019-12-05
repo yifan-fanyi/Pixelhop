@@ -12,6 +12,7 @@ class myRegression():
 
     def fit(self, X, Y):
         tmp = np.unique(Y)
+        tmp = tmp.astype('int32')
         if tmp.shape[0] == self.num_class:
             self.class_list = np.ones((self.num_class))
         elif tmp.shape[0] == 1:
