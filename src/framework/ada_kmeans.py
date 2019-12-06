@@ -83,7 +83,7 @@ def Compute_Weight(Y):
         if (Y[Y==i].shape[0]) == 0:
             weight[i] = 0
         else:
-            weight[i] = 1./ (float)(Y[Y==i].shape[0])
+            weight[i] = (float)(Y[Y==i].shape[0])
     weight /= np.sum(weight)
     return weight
 
@@ -193,7 +193,7 @@ def Multi_Trial(X, sep_num, batch_size, trial, num_class, err):
             center = kmeans.cluster_centers_.copy()
             label = kmeans.labels_.copy()
             print("           <Info>        Multi_Trial %s: Found a separation better than original! CE: %s"%(str(i),str(H)))
-    print("           <Debug Info>        Gloabal entropy of each trail %s: "%(str(t_entropy)))
+    print("           <Debug Info>        Gloabal entropy of each trail :s%s"%(str(t_entropy)))
     if len(center) == 0:
         return []
     subX = []
