@@ -1,4 +1,4 @@
-# v2019.11.30.v1
+# v2019.12.06.v1
 import os
 import sys
 import numpy as np
@@ -10,10 +10,7 @@ import math
 import random
 from sklearn import preprocessing 
 from sklearn.cluster import MiniBatchKMeans, KMeans
-from sklearn.metrics import log_loss as LL
 from collections import Counter
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics.pairwise import euclidean_distances
 import matplotlib.pyplot as plt
 
 from framework.regression import myRegression
@@ -24,12 +21,17 @@ warnings.filterwarnings('ignore')
 #from sklearn.ensemble import RandomForestRegressor, RandomForestClassifier
 #RandomForestClassifier(n_estimators=10, max_depth=7, verbose=1, n_jobs=20),
 def Regression_Method(X, Y, num_class):
-    reg = myRegression(LogisticRegression(solver='liblinear', multi_class='ovr', n_jobs=20),
+    reg = myRegression(sklearn.linear_model.LogisticRegression(solver='liblinear', multi_class='ovr', n_jobs=20),
                         num_class)
     reg.fit(X, Y)
     reg.score(X, Y)
     return reg
 
+#define which cross entropy to use
+def Comupte_Cross_Entropy(X, Y, num_class):
+    return ML_Cross_Entropy(X, Y, num_class)
+    #return KMeans_Cross_Entropy(X, Y, num_class)
+    
 def Majority_Vote(Y, mvth):
     new_label = -1
     label = np.unique(Y)
@@ -88,7 +90,7 @@ def Compute_Weight(Y):
     return weight
 
 # latest cross entropy method
-def Comupte_Cross_Entropy(X, Y, num_class, num_bin=32):
+def KMeans_Cross_Entropy(X, Y, num_class, num_bin=32):
     samp_num = Y.size
     if np.unique(Y).shape[0] == 1: #alread pure
         return 0
@@ -105,8 +107,17 @@ def Comupte_Cross_Entropy(X, Y, num_class, num_bin=32):
     true_indicator = np.zeros((samp_num, num_class))
     true_indicator[np.arange(samp_num), Y] = 1
     probab = prob[kmeans.labels_]
-    return LL(true_indicator,probab)/math.log(num_class)
+    return sklearn.metrics.log_loss(true_indicator,probab)/math.log(num_class)
 
+# new machine learning based cross entropy
+def ML_Cross_Entropy(X, Y, num_class):
+    X, XX, Y, YY = sklearn.model_selection.train_test_split(X, Y, train_size=0.8, random_state=42, stratify=Y)
+    reg = myRegression(sklearn.ensemble.RandomForestRegressor(n_estimators=100, max_depth=7, verbose=0, n_jobs=-1),
+                        num_class)
+    reg.fit(X, Y)
+    pred = reg.predict_proba(XX)
+    pred = pred[YY]
+    return sklearn.metrics.log_loss(YY, pred, eps=1e-15, normalize=True, sample_weight=None, labels=None)
 ################################# Init For Root Node #################################
 # init kmeans centroid with center of samples from each label, then do kmeans
 def Init_By_Class(X, Y, num_class, sep_num, trial):
@@ -295,7 +306,7 @@ def Ada_KMeans_Iter_test(X, key_parent, data, sep_num):
             centroid.append(data[key_parent+str(i)]['Centroid'].reshape(-1))
             key_child.append(key_parent+str(i))
     centroid = np.array(centroid)
-    dist = euclidean_distances(X.reshape(1,-1), centroid).squeeze()
+    dist = sklearn.metrics.pairwise.euclidean_distances(X.reshape(1,-1), centroid).squeeze()
     key = key_child[np.argmin(dist)]
     if 'Regressor' in data[key]:
         return key   

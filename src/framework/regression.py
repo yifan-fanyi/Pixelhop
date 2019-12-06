@@ -1,7 +1,7 @@
-# 2019.11.23.v1
+# 2019.12.06.v1
 import numpy as np 
-import warnings
 from sklearn.metrics import accuracy_score
+import warnings
 warnings.filterwarnings('ignore')
 
 class myRegression():
@@ -27,7 +27,11 @@ class myRegression():
     def predict_proba(self, X):
         if np.sum(self.class_list) == 1:
             return np.ones((X.shape[0], self.num_class)) * self.class_list
-        tmp_pred = self.regressor.predict_proba(X)
+        try:
+            tmp_pred = self.regressor.predict_proba(X)
+        except:
+            tmp_pred = self.regressor.predict(X).reshape(-1,1)
+            tmp_pred = np.concatenate((tmp_pred, 1-tmp_pred), axis=1)
         pred = np.zeros((X.shape[0], self.num_class))
         idx = 0
         for i in range(self.num_class):
@@ -35,7 +39,7 @@ class myRegression():
                 pred[:, i] = tmp_pred[:, idx]
                 idx += 1
         return pred.reshape(X.shape[0], self.num_class)
-    
+
     def score(self, X, Y):
         pred = self.predict_proba(X)
         pred = np.argmax(pred, axis=1)
