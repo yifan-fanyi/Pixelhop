@@ -117,7 +117,8 @@ def ML_Cross_Entropy(X, Y, num_class):
     reg.fit(X, Y)
     pred = reg.predict_proba(XX)
     pred = pred[YY]
-    return sklearn.metrics.log_loss(YY, pred, eps=1e-15, normalize=True, sample_weight=None, labels=None)
+    return sklearn.metrics.log_loss(YY, pred, eps=1e-15, normalize=True, sample_weight=None, labels=None)/math.log(num_class)
+    
 ################################# Init For Root Node #################################
 # init kmeans centroid with center of samples from each label, then do kmeans
 def Init_By_Class(X, Y, num_class, sep_num, trial):
@@ -204,7 +205,7 @@ def Multi_Trial(X, sep_num, batch_size, trial, num_class, err):
             center = kmeans.cluster_centers_.copy()
             label = kmeans.labels_.copy()
             print("           <Info>        Multi_Trial %s: Found a separation better than original! CE: %s"%(str(i),str(H)))
-    print("           <Debug Info>        Gloabal entropy of each trail :s%s"%(str(t_entropy)))
+    print("           <Debug Info>        Gloabal entropy of each trail: %s"%(str(t_entropy)))
     if len(center) == 0:
         return []
     subX = []
@@ -251,18 +252,18 @@ def Ada_KMeans_train(X, Y, sep_num, trial, batch_size, minS, maxN, err, mvth, ma
             break
         # if this cluster has too few sample, do not split this node
         if data[Hidx[idx]]['Data'].shape[0] < minS: 
-            print("       <Warning>        Iter %s: Too small! continue for the next largest"%str(myiter))
+            print("       <Warning>        Iter %s: Too small! continue for the next largest!"%str(myiter))
             H[idx] = -H[idx]
             continue
         # maxdepth
         if len(data[Hidx[idx]]['ID']) >= maxdepth: 
-            print("       <Warning>        Depth >= maxdepth %s: Too small! continue for the next largest"%str(maxdepth))
+            print("       <Warning>        Depth >= maxdepth %s: Too small! continue for the next largest!"%str(maxdepth))
             H[idx] = -H[idx]
             continue
         # majority vote
         tmp = Majority_Vote(data[Hidx[idx]]['Label'], mvth)
         if tmp != -1:
-            print("       <Warning>        Majority vote on this node, no further split needed")
+            print("       <Warning>        Majority vote on this node, no further split needed!")
             H[idx] = -H[idx]
             data[Hidx[idx]]['Label'] = tmp * np.ones((data[Hidx[idx]]['Label'].shape[0]))
             continue 
@@ -284,7 +285,7 @@ def Ada_KMeans_train(X, Y, sep_num, trial, batch_size, minS, maxN, err, mvth, ma
             myiter += 1
             global_H.append(Compute_GlobalH(data, rootSampNum, Hidx))
         else:
-            print("       <Warning>        Iter %s: Don't split! continue for the next largest"%str(myiter))
+            print("       <Warning>        Iter %s: Don't split! continue for the next largest!"%str(myiter))
             H[idx] = -H[idx]
     data = Leaf_Node_Regression(data, Hidx, num_class)
     print("------------------- End: Ada_KMeans_train -> using %10f seconds"%(time.time()-t0))

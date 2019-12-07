@@ -60,7 +60,7 @@ class Saab():
         mean = pca.mean_
         print("       <Info>        Num of kernels: %d" % num_components)
         print("       <Info>        Energy percent: %f" % np.cumsum(pca.explained_variance_ratio_)[num_components - 1])
-        return kernels, mean
+        return kernels, mean, pca.explained_variance_ratio_
 
     def Transform(self, feature, kernels):
         if self.batch == None:
@@ -85,7 +85,7 @@ class Saab():
         pixelhop_feature, feature_expectation = self.remove_mean(pixelhop_feature, axis=0)
         pixelhop_feature, dc = self.remove_mean(pixelhop_feature, axis=1)
         print('       <Info>        training_data.shape: {}'.format(pixelhop_feature.shape))
-        kernels, mean = self.find_kernels_pca(pixelhop_feature)
+        kernels, mean, energy_k = self.find_kernels_pca(pixelhop_feature)
         num_channels = pixelhop_feature.shape[1]     
         if self.useDC == True:       
             dc_kernel = 1 / np.sqrt(num_channels) * np.ones((1, num_channels))
@@ -103,6 +103,7 @@ class Saab():
         pca_params['Layer_%d/feature_expectation' % 0] = feature_expectation
         pca_params['Layer_%d/kernel' % 0] = kernels
         pca_params['Layer_%d/pca_mean' % 0] = mean
+        pca_params['Layer_%d/pca_energy' % 0] = energy_k
         return pca_params
 
     def fit(self, pixelhop_feature):
