@@ -1,4 +1,4 @@
-# v2019.12.06.v1
+# v2019.12.12.v1
 import os
 import sys
 import numpy as np
@@ -112,13 +112,16 @@ def KMeans_Cross_Entropy(X, Y, num_class, num_bin=32):
 # new machine learning based cross entropy
 def ML_Cross_Entropy(X, Y, num_class):
     X, XX, Y, YY = sklearn.model_selection.train_test_split(X, Y, train_size=0.8, random_state=42, stratify=Y)
-    reg = myRegression(sklearn.ensemble.RandomForestRegressor(n_estimators=100, max_depth=7, verbose=0, n_jobs=-1),
+    reg = myRegression(sklearn.ensemble.RandomForestClassifier(n_estimators=100, max_depth=7, verbose=0, n_jobs=-1, class_weight='balanced'),
                         num_class)
     reg.fit(X, Y)
     pred = reg.predict_proba(XX)
     pred = pred[YY]
-    return sklearn.metrics.log_loss(YY, pred, eps=1e-15, normalize=True, sample_weight=None, labels=None)/math.log(num_class)
-    
+    print("           <Debug Info>        train:")
+    reg.score(X, Y)
+    print("           <Debug Info>        test:")
+    reg.score(XX, YY)
+    return sklearn.metrics.log_loss(YY, pred, eps=1e-15, normalize=True, sample_weight=None, labels=None)
 ################################# Init For Root Node #################################
 # init kmeans centroid with center of samples from each label, then do kmeans
 def Init_By_Class(X, Y, num_class, sep_num, trial):
