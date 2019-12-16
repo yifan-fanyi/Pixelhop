@@ -116,12 +116,13 @@ def ML_Cross_Entropy(X, Y, num_class):
                         num_class)
     reg.fit(X, Y)
     pred = reg.predict_proba(XX)
-    pred = pred[YY]
+    pred = pred[YY.reshape(-1)]
     print("           <Debug Info>        train:")
     reg.score(X, Y)
     print("           <Debug Info>        test:")
     reg.score(XX, YY)
     return sklearn.metrics.log_loss(YY, pred, eps=1e-15, normalize=True, sample_weight=None, labels=None)
+
 ################################# Init For Root Node #################################
 # init kmeans centroid with center of samples from each label, then do kmeans
 def Init_By_Class(X, Y, num_class, sep_num, trial):
