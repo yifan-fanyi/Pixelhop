@@ -1,4 +1,4 @@
-# v2019.12.12.v1
+# v2019.12.30.v1
 import os
 import sys
 import numpy as np
@@ -8,6 +8,7 @@ import scipy
 import sklearn
 import math
 import random
+import keras
 from sklearn import preprocessing 
 from sklearn.cluster import MiniBatchKMeans, KMeans
 from collections import Counter
@@ -104,8 +105,7 @@ def KMeans_Cross_Entropy(X, Y, num_class, num_bin=32):
         for j in range(num_class):
             prob[i, j] = (float)(tmp[tmp == j].shape[0]) / ((float)(Y[Y==j].shape[0]) + 1e-5)
     prob = (prob)/(np.sum(prob, axis=1).reshape(-1,1) + 1e-5)
-    true_indicator = np.zeros((samp_num, num_class))
-    true_indicator[np.arange(samp_num), Y] = 1
+    true_indicator = keras.utils.to_categorical(Y, num_classes=num_class)
     probab = prob[kmeans.labels_]
     return sklearn.metrics.log_loss(true_indicator,probab)/math.log(num_class)
 
@@ -121,9 +121,8 @@ def ML_Cross_Entropy(X, Y, num_class):
     reg.score(X, Y)
     print("           <Debug Info>        test:")
     reg.score(XX, YY)
-    one_hot = sklearn.preprocessing.OneHotEncoder(n_values=num_class, sparse=False)
-    YY = one_hot.fit_transform(YY)
-    return sklearn.metrics.log_loss(YY, pred, eps=1e-15, normalize=True, sample_weight=None, labels=None)
+    true_indicator = keras.utils.to_categorical(YY, num_classes=num_class)
+    return sklearn.metrics.log_loss(true_indicator, pred)/math.log(num_class)
 
 ################################# Init For Root Node #################################
 # init kmeans centroid with center of samples from each label, then do kmeans
