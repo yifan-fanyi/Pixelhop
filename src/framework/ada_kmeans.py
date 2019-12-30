@@ -121,6 +121,8 @@ def ML_Cross_Entropy(X, Y, num_class):
     reg.score(X, Y)
     print("           <Debug Info>        test:")
     reg.score(XX, YY)
+    one_hot = sklearn.preprocessing.OneHotEncoder(n_values=num_class, sparse=False)
+    YY = one_hot.fit_transform(YY)
     return sklearn.metrics.log_loss(YY, pred, eps=1e-15, normalize=True, sample_weight=None, labels=None)
 
 ################################# Init For Root Node #################################
