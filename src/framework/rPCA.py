@@ -1,4 +1,4 @@
-# v2020.01.12
+# v2020.01.13
 import numpy as np 
 from numpy import linalg
 import sklearn
@@ -14,9 +14,10 @@ def Single_PCA_train(X, Y, num_feature_piter=1):
     for i in range(num_feature_piter):
         par['idx'][i] = i
         par['Energy'][i] = par['PCA'].explained_variance_ratio_[par['idx'][i]]
-    par['Bias'] = np.max(linalg.norm(X, axis=1))
+    par['Bias'] = np.max(linalg.norm(X_transform[:,par['idx']], axis=1))
     fea = X_transform[:,par['idx']] + par['Bias']
     X_transform[:,par['idx']] = 0
+    X_mean[:, par['idx']] = 0
     X = np.dot(X_transform, par['PCA'].components_) + X_mean
     return X, fea, par 
 
@@ -25,6 +26,7 @@ def Single_PCA_test(X, par):
     X_transform = par['PCA'].transform(X) 
     fea = X_transform[:,par['idx']] + par['Bias']
     X_transform[:,par['idx']] = 0
+    X_mean[:, par['idx']] = 0
     X = np.dot(X_transform, par['PCA'].components_) + X_mean
     return X, fea
 
@@ -76,8 +78,7 @@ if __name__ == "__main__":
     X = X.astype('float64')
     Y = cv2.imread('3063t.jpg', 0).reshape(-1,1)
     Y[Y!=0] = 1
-    #print(X.shape,Y.shape)
-    #rPCA_train(X[0:100], Y[0:100], num_feature=1, energy=None, num_feature=2)
-    #print(X[0:3])
+    rPCA_train(X[0:100], Y[0:100], num_feature=1, energy=None, num_feature=2)
+    print(X[0:3])
     fea = rPCA(X[0:100], Y[0:100], num_feature_piter=1, energy=None, path='tmp.pkl', train=0, num_feature=2)
     print(fea[0:3])
