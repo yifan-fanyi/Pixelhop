@@ -11,13 +11,13 @@ import pickle
 import time
 
 class Saab():
-    def __init__(self, pca_name, num_kernels, energy_percent=None, useDC=False, batch=None, needBias=False):
+    def __init__(self, pca_name, num_kernels, energy_percent=None, useDC=False, batch=None, needBias=True):
         self.pca_name = pca_name
         self.num_kernels = num_kernels
         self.useDC = useDC
         self.batch = batch
         self.energy_percent = energy_percent
-        self.needBias = False
+        self.needBias = needBias
 
     # axis=0 batch operation would have something wrong
     # I need to go to bed, leave it for furture
